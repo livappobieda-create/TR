@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
-    "start": "next start",
+    "build": "prisma migrate deploy && next build",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
