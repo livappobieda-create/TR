@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String           @id @default(cuid())
+  username     String           @unique
+  email        String           @unique
+  passwordHash String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  accounts     TradingAccount[]
+}
+
+enum AccountType {
+  PERSONAL
+  PROP_FIRM
+  DEMO
+  LIVE
+}
+
+enum AccountPhase {
+  CHALLENGE_PHASE_1
+  CHALLENGE_PHASE_2
+  FUNDED
+}
+
+model TradingAccount {
+  id                    String       @id @default(cuid())
+  userId                String
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String
+  accountType           AccountType  @default(PERSONAL)
+  initialBalance        Float
+  currentBalance        Float
+  isFunded              Boolean      @default(false)
+  propFirmName          String?
+  challengeSize         Float?
+  profitTarget          Float?
+  dailyDrawdownLimit    Float?
+  maxDrawdownLimit      Float?
+  currentDrawdown       Float        @default(0)
+  currentProfitProgress Float        @default(0)
+  phase                 AccountPhase @default(CHALLENGE_PHASE_1)
+  phaseStartDate        DateTime     @default(now())
+  phaseDaysRemaining    Int          @default(30)
+  isActive              Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  dailyEntries          DailyEntry[]
+
+  @@index([userId])
+}
+
+model DailyEntry {
+  id            String         @id @default(cuid())
+  accountId     String
+  account       TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date          DateTime
+  startBalance  Float
+  endBalance    Float
+  dailyPnl      Float
+  dailyPnlPct   Float
+  equityChange  Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([accountId, date])
+  @@index([accountId])
+}
