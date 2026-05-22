@@ -18,6 +18,7 @@ import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { EditAccountModal } from "@/components/accounts/EditAccountModal";
 import { DeleteAccountModal } from "@/components/accounts/DeleteAccountModal";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useSelectedAccount } from "@/hooks/useSelectedAccount";
 import { useStats } from "@/hooks/useStats";
 import { useLang } from "@/context/LangContext";
 import { formatCurrency, formatPercent } from "@/lib/utils";
@@ -140,7 +141,7 @@ function QuickActionCard({
 
 export default function DashboardPage() {
   const { accounts, loading, refresh } = useAccounts();
-  const [selectedId, setSelectedId] = useState<string>("");
+  const { selectedId, setSelectedId } = useSelectedAccount(accounts);
   const { data, loading: statsLoading, refresh: refreshStats } = useStats(
     selectedId || null
   );
@@ -149,12 +150,6 @@ export default function DashboardPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const selectedAccount = accounts.find((a) => a.id === selectedId);
-
-  useEffect(() => {
-    if (accounts.length && !selectedId) {
-      setSelectedId(accounts[0].id);
-    }
-  }, [accounts, selectedId]);
 
   function handleAccountDeleted(id: string) {
     refresh();
@@ -349,10 +344,10 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
                     <Activity className="h-4 w-4 text-cyan-400" />
-                    Equity Curve — {data!.equityCurve.length} trading days
+                    {t("equityCurve")} — {data!.equityCurve.length} {t("tradingDays")}
                   </h2>
                   <Link href="/equity-replay" className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors">
-                    Replay <Play className="h-3 w-3" />
+                    {t("replay")} <Play className="h-3 w-3" />
                   </Link>
                 </div>
                 <div className="h-40">
@@ -393,7 +388,7 @@ export default function DashboardPage() {
                           fontSize: 12,
                           fontFamily: "JetBrains Mono, monospace",
                         }}
-                        formatter={(v: number) => [formatCurrency(v), "Balance"]}
+                        formatter={(v: number) => [formatCurrency(v), t("balance")]}
                         labelFormatter={(v) => new Date(v).toLocaleDateString()}
                       />
                       <Area
@@ -423,10 +418,10 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3 mb-5">
                   <Shield className="h-5 w-5 text-cyan-400" />
                   <h2 className="text-base font-bold text-gradient">
-                    Phase Tracker — {account.phase.replace(/_/g, " ")}
+                    {t("phaseTracker")} — {account.phase.replace(/_/g, " ")}
                   </h2>
                   {account.isFunded && (
-                    <span className="badge badge-cyan ml-auto">Funded</span>
+                    <span className="badge badge-cyan ml-auto">{t("fundedLabel")}</span>
                   )}
                 </div>
                 <PhaseTracker
@@ -447,30 +442,30 @@ export default function DashboardPage() {
           transition={{ delay: 0.4 }}
           className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3"
         >
-          Quick Actions
+          {t("quickActions")}
         </motion.h2>
         <div className="grid md:grid-cols-3 gap-4">
           <QuickActionCard
             href="/daily-entry"
             icon={PenLine}
-            label="Daily Entry"
-            desc="One-click PnL logging — fastest workflow"
+            label={t("dailyEntry")}
+            desc={t("dailyEntryDesc")}
             color="rgba(0,245,255,0.08)"
             delay={0.42}
           />
           <QuickActionCard
             href="/analytics"
             icon={BarChart3}
-            label="Analytics Engine"
-            desc="20+ metrics calculated with pure math"
+            label={t("analyticsTitle")}
+            desc={t("analyticsDesc")}
             color="rgba(176,38,255,0.08)"
             delay={0.46}
           />
           <QuickActionCard
             href="/equity-replay"
             icon={Play}
-            label="Equity Replay"
-            desc="Cinematic day-by-day balance animation"
+            label={t("equityReplayTitle")}
+            desc={t("equityReplayDesc")}
             color="rgba(255,45,149,0.06)"
             delay={0.5}
           />
@@ -486,7 +481,7 @@ export default function DashboardPage() {
           className="glass-card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center"
         >
           {[
-            { label: "Consistency", value: stats.consistencyScore.toFixed(0), suffix: "/100" },
+            { label: t("consistencyScore"), value: stats.consistencyScore.toFixed(0), suffix: "/100" },
             { label: t("avgWinDay"), value: formatCurrency(stats.avgDailyGain) },
             { label: t("maxWinStreak"), value: String(stats.maxConsecutiveWins), suffix: ` ${t("tradingDays")}` },
             { label: t("riskExposure"), value: formatPercent(stats.riskExposure) },
@@ -524,4 +519,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

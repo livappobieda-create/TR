@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { DailyEntryForm } from "@/components/daily/DailyEntryForm";
@@ -8,20 +7,20 @@ import { AccountSelector } from "@/components/accounts/AccountSelector";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useSelectedAccount } from "@/hooks/useSelectedAccount";
 import { useStats } from "@/hooks/useStats";
 import { StatsGrid } from "@/components/stats/StatsGrid";
+import { useLang } from "@/context/LangContext";
 import { formatCurrency, formatPercent } from "@/lib/utils";
+import { useState } from "react";
 import { PenLine, TrendingUp, TrendingDown, Zap, Calendar } from "lucide-react";
 
 export default function DailyEntryPage() {
   const { accounts, loading, refresh } = useAccounts();
-  const [selectedId, setSelectedId] = useState("");
+  const { selectedId, setSelectedId } = useSelectedAccount(accounts);
   const { data, refresh: refreshStats } = useStats(selectedId || null);
   const [showStats, setShowStats] = useState(false);
-
-  useEffect(() => {
-    if (accounts.length && !selectedId) setSelectedId(accounts[0].id);
-  }, [accounts, selectedId]);
+  const { t } = useLang();
 
   const account = accounts.find((a) => a.id === selectedId);
 
@@ -29,9 +28,9 @@ export default function DailyEntryPage() {
     return (
       <GlassCard className="text-center py-16">
         <Zap className="h-12 w-12 text-cyan-400 mx-auto mb-4" />
-        <p className="text-slate-400 mb-6">Create an account first to log entries.</p>
+        <p className="text-slate-400 mb-6">{t("createAccountFirst")}</p>
         <Link href="/onboarding" className="neon-btn inline-block">
-          Set Up Account
+          {t("setupAccountBtn")}
         </Link>
       </GlassCard>
     );
@@ -45,10 +44,10 @@ export default function DailyEntryPage() {
       <div>
         <h1 className="text-3xl font-black text-gradient flex items-center gap-3">
           <PenLine className="h-8 w-8 text-cyan-400" />
-          Daily Entry
+          {t("dailyEntryTitle")}
         </h1>
         <p className="text-slate-500 text-sm mt-1">
-          Ultra-minimal — enter start & end balance. Stats calculate instantly.
+          {t("dailyEntrySubtitle")}
         </p>
         <div className="mt-4">
           <AccountSelector
@@ -73,39 +72,39 @@ export default function DailyEntryPage() {
         >
           {[
             {
-              label: "Today",
+              labelKey: "today" as const,
               value: stats.dailyProfitPct,
               fmt: formatPercent,
               pos: stats.dailyProfitPct >= 0,
             },
             {
-              label: "This Week",
+              labelKey: "thisWeek" as const,
               value: stats.weeklyProfitPct,
               fmt: formatPercent,
               pos: stats.weeklyProfitPct >= 0,
             },
             {
-              label: "This Month",
+              labelKey: "thisMonth" as const,
               value: stats.monthlyProfitPct,
               fmt: formatPercent,
               pos: stats.monthlyProfitPct >= 0,
             },
             {
-              label: "Total PnL",
+              labelKey: "totalPnl" as const,
               value: stats.totalPnl,
               fmt: formatCurrency,
               pos: stats.totalPnl >= 0,
             },
           ].map((item, i) => (
             <motion.div
-              key={item.label}
+              key={item.labelKey}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
             >
               <div className="glass-card p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-slate-500">{item.label}</span>
+                  <span className="text-xs text-slate-500">{t(item.labelKey)}</span>
                   {item.pos ? (
                     <TrendingUp className="h-3 w-3 text-green-400" />
                   ) : (
@@ -145,7 +144,7 @@ export default function DailyEntryPage() {
             onClick={() => setShowStats((s) => !s)}
             className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-300 transition-colors mb-4"
           >
-            <span>{showStats ? "Hide" : "Show"} full statistics</span>
+            <span>{showStats ? t("hideStats") : t("showStats")}</span>
             <motion.span
               animate={{ rotate: showStats ? 180 : 0 }}
               transition={{ duration: 0.2 }}
@@ -163,7 +162,7 @@ export default function DailyEntryPage() {
                 transition={{ duration: 0.3 }}
               >
                 <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
-                  Updated Statistics
+                  {t("updatedStatistics")}
                 </h2>
                 <StatsGrid stats={stats} />
               </motion.div>

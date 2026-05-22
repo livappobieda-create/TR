@@ -1,31 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { EquityReplay } from "@/components/equity/EquityReplay";
 import { AccountSelector } from "@/components/accounts/AccountSelector";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useSelectedAccount } from "@/hooks/useSelectedAccount";
 import { useStats } from "@/hooks/useStats";
+import { useLang } from "@/context/LangContext";
 import { Play, Zap, PlusCircle } from "lucide-react";
 
 export default function EquityReplayPage() {
   const { accounts, loading } = useAccounts();
-  const [selectedId, setSelectedId] = useState("");
+  const { selectedId, setSelectedId } = useSelectedAccount(accounts);
   const { data, loading: statsLoading } = useStats(selectedId || null);
-
-  useEffect(() => {
-    if (accounts.length && !selectedId) setSelectedId(accounts[0].id);
-  }, [accounts, selectedId]);
+  const { t } = useLang();
 
   if (!loading && accounts.length === 0) {
     return (
       <GlassCard className="text-center py-16">
         <Zap className="h-12 w-12 text-cyan-400 mx-auto mb-4" />
-        <p className="text-slate-400 mb-6">No accounts yet.</p>
+        <p className="text-slate-400 mb-6">{t("noAccountsYet")}</p>
         <Link href="/onboarding" className="neon-btn inline-block">
-          Set Up Account
+          {t("setupAccountBtn")}
         </Link>
       </GlassCard>
     );
@@ -38,10 +36,10 @@ export default function EquityReplayPage() {
         <div>
           <h1 className="text-3xl font-black text-gradient flex items-center gap-3">
             <Play className="h-8 w-8 text-cyan-400" />
-            Equity Replay
+            {t("equityReplayTitle")}
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Cinematic day-by-day balance animation with play controls
+            {t("equityReplaySubtitle")}
           </p>
         </div>
         <AccountSelector
@@ -74,16 +72,16 @@ export default function EquityReplayPage() {
           >
             <Play className="h-14 w-14 text-cyan-400" />
           </div>
-          <h2 className="text-2xl font-black text-white mb-3">No Data to Replay</h2>
+          <h2 className="text-2xl font-black text-white mb-3">{t("noDataTitle")}</h2>
           <p className="text-slate-400 mb-8 max-w-sm mx-auto">
-            Add daily trading entries to unlock the cinematic equity replay experience.
+            {t("noDataDesc")}
           </p>
           <Link
             href="/daily-entry"
             className="neon-btn inline-flex items-center gap-2 px-6 py-3"
           >
             <PlusCircle className="h-4 w-4" />
-            Add Daily Entry
+            {t("addDailyEntry")}
           </Link>
         </motion.div>
       ) : (

@@ -25,6 +25,7 @@ import {
 import { GlassCard } from "@/components/ui/GlassCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { formatCurrency, formatPercent } from "@/lib/utils";
+import { useLang } from "@/context/LangContext";
 
 interface EquityPoint {
   date: string;
@@ -55,6 +56,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function EquityReplay({ data }: { data: EquityPoint[] }) {
+  const { t } = useLang();
   const [playing, setPlaying] = useState(false);
   const [frame, setFrame] = useState(1);
   const [speed, setSpeed] = useState(1);
@@ -133,8 +135,8 @@ export function EquityReplay({ data }: { data: EquityPoint[] }) {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-xl font-black text-gradient">Equity Replay</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Cinematic day-by-day balance animation</p>
+          <h2 className="text-xl font-black text-gradient">{t("equityReplayTitle")}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{t("equityReplaySubtitle")}</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -148,7 +150,7 @@ export function EquityReplay({ data }: { data: EquityPoint[] }) {
                   : "text-slate-500 hover:text-cyan-300 border border-transparent"
               }`}
             >
-              {m}
+              {m === "weekly" ? t("weekly") : m === "monthly" ? t("monthly") : t("full")}
             </button>
           ))}
         </div>
@@ -258,13 +260,13 @@ export function EquityReplay({ data }: { data: EquityPoint[] }) {
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div className="glass-card p-3">
-          <span className="text-slate-500 text-xs block mb-1">Balance</span>
+          <span className="text-slate-500 text-xs block mb-1">{t("balance")}</span>
           <span className="text-cyan-300 font-mono font-black text-sm">
             {current ? formatCurrency(current.balance) : "—"}
           </span>
         </div>
         <div className="glass-card p-3">
-          <span className="text-slate-500 text-xs block mb-1">Drawdown</span>
+          <span className="text-slate-500 text-xs block mb-1">{t("drawdown")}</span>
           <span className={`font-mono font-black text-sm ${drawdown > 5 ? "text-pink-400" : "text-orange-400"}`}>
             {drawdown.toFixed(2)}%
           </span>
@@ -272,14 +274,14 @@ export function EquityReplay({ data }: { data: EquityPoint[] }) {
         <div className="glass-card p-3">
           <span className="text-xs block mb-1">
             <span className="text-green-400">▲</span>
-            <span className="text-slate-500"> Win Days</span>
+            <span className="text-slate-500"> {t("winDays")}</span>
           </span>
           <span className="text-green-400 font-mono font-black text-sm">{winDays}</span>
         </div>
         <div className="glass-card p-3">
           <span className="text-xs block mb-1">
             <span className="text-pink-400">▼</span>
-            <span className="text-slate-500"> Loss Days</span>
+            <span className="text-slate-500"> {t("lossDays")}</span>
           </span>
           <span className="text-pink-400 font-mono font-black text-sm">{lossDays}</span>
         </div>
@@ -338,7 +340,7 @@ export function EquityReplay({ data }: { data: EquityPoint[] }) {
               </motion.span>
             )}
           </AnimatePresence>
-          <span className="text-sm font-semibold">{playing ? "Pause" : "Play Replay"}</span>
+          <span className="text-sm font-semibold">{playing ? t("pause") : t("playReplay")}</span>
         </motion.button>
 
         <div className="flex items-center gap-1.5 glass-card px-3 py-2">
@@ -372,11 +374,11 @@ export function EquityReplay({ data }: { data: EquityPoint[] }) {
           />
         </div>
         <p className="text-center text-xs text-slate-600 mt-2 font-mono">
-          Day {frame} / {filtered.length} —{" "}
+          {t("day")} {frame} / {filtered.length} —{" "}
           <span className={totalPnl >= 0 ? "text-green-400" : "text-pink-400"}>
             {totalPnl >= 0 ? "+" : ""}{formatCurrency(totalPnl)}
           </span>{" "}
-          total P&L
+          {t("totalPnlLabel")}
         </p>
       </div>
     </GlassCard>

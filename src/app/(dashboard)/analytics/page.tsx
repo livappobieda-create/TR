@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   AreaChart,
   Area,
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -23,7 +21,9 @@ import { StatsGrid } from "@/components/stats/StatsGrid";
 import { PhaseTracker } from "@/components/accounts/PhaseTracker";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useSelectedAccount } from "@/hooks/useSelectedAccount";
 import { useStats } from "@/hooks/useStats";
+import { useLang } from "@/context/LangContext";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import {
   BarChart3,
@@ -31,34 +31,30 @@ import {
   Calendar,
   Activity,
   Shield,
-  ChevronDown,
 } from "lucide-react";
 
 type Period = "7d" | "30d" | "90d" | "all";
 
-const PERIODS: { value: Period; label: string }[] = [
-  { value: "7d", label: "7D" },
-  { value: "30d", label: "30D" },
-  { value: "90d", label: "90D" },
-  { value: "all", label: "All" },
-];
-
 export default function AnalyticsPage() {
   const { accounts, loading } = useAccounts();
-  const [selectedId, setSelectedId] = useState("");
+  const { selectedId, setSelectedId } = useSelectedAccount(accounts);
   const [period, setPeriod] = useState<Period>("all");
   const { data, loading: statsLoading } = useStats(selectedId || null);
+  const { t } = useLang();
 
-  useEffect(() => {
-    if (accounts.length && !selectedId) setSelectedId(accounts[0].id);
-  }, [accounts, selectedId]);
+  const PERIODS: { value: Period; labelKey: "period7d" | "period30d" | "period90d" | "periodAll" }[] = [
+    { value: "7d", labelKey: "period7d" },
+    { value: "30d", labelKey: "period30d" },
+    { value: "90d", labelKey: "period90d" },
+    { value: "all", labelKey: "periodAll" },
+  ];
 
   if (!loading && accounts.length === 0) {
     return (
       <GlassCard className="text-center py-12">
-        <p className="text-slate-400 mb-4">No accounts yet.</p>
+        <p className="text-slate-400 mb-4">{t("noAccountsYet")}</p>
         <Link href="/onboarding" className="neon-btn inline-block">
-          Set Up Account
+          {t("setupAccountBtn")}
         </Link>
       </GlassCard>
     );
@@ -85,10 +81,10 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gradient">Analytics Engine</h1>
+          <h1 className="text-3xl font-black text-gradient">{t("analyticsTitle")}</h1>
           <p className="text-slate-500 text-sm mt-1 flex items-center gap-1.5">
             <BarChart3 className="h-3.5 w-3.5" />
-            Pure mathematical formulas — zero AI — 20+ metrics
+            {t("analyticsSubtitleFull")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -104,7 +100,7 @@ export default function AnalyticsPage() {
                     : "text-slate-500 hover:text-slate-300"
                 }`}
               >
-                {p.label}
+                {t(p.labelKey)}
               </button>
             ))}
           </div>
@@ -135,7 +131,7 @@ export default function AnalyticsPage() {
               <GlassCard>
                 <div className="flex items-center gap-3 mb-5">
                   <Shield className="h-5 w-5 text-cyan-400" />
-                  <h2 className="text-base font-bold text-gradient">Funded Account Phase</h2>
+                  <h2 className="text-base font-bold text-gradient">{t("fundedAccountPhase")}</h2>
                   <span className="badge badge-purple ml-auto">
                     {data.account.phase.replace(/_/g, " ")}
                   </span>
@@ -153,14 +149,14 @@ export default function AnalyticsPage() {
             <GlassCard>
               <div className="flex items-center gap-3 mb-5">
                 <Activity className="h-5 w-5 text-cyan-400" />
-                <h2 className="text-base font-bold text-white">Equity Curve</h2>
+                <h2 className="text-base font-bold text-white">{t("equityCurve")}</h2>
                 <span className="text-xs text-slate-500 ml-auto font-mono">
-                  {filteredCurve.length} days
+                  {filteredCurve.length} {t("tradingDays")}
                 </span>
               </div>
               {filteredCurve.length < 2 ? (
                 <p className="text-slate-500 text-sm text-center py-8">
-                  Add more daily entries to see the equity curve.
+                  {t("addMoreEntries")}
                 </p>
               ) : (
                 <div className="h-64">
@@ -204,7 +200,7 @@ export default function AnalyticsPage() {
                           fontSize: 12,
                           fontFamily: "JetBrains Mono, monospace",
                         }}
-                        formatter={(v: number) => [formatCurrency(v), "Balance"]}
+                        formatter={(v: number) => [formatCurrency(v), t("balance")]}
                         labelFormatter={(v) => new Date(v).toLocaleDateString()}
                       />
                       <Area
@@ -229,7 +225,7 @@ export default function AnalyticsPage() {
               <GlassCard>
                 <div className="flex items-center gap-3 mb-5">
                   <TrendingUp className="h-5 w-5 text-purple-400" />
-                  <h2 className="text-base font-bold text-white">Daily P&L</h2>
+                  <h2 className="text-base font-bold text-white">{t("dailyPnlChart")}</h2>
                 </div>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
@@ -262,7 +258,7 @@ export default function AnalyticsPage() {
                         }}
                         formatter={(v: number) => [
                           formatCurrency(v),
-                          v >= 0 ? "Profit" : "Loss",
+                          v >= 0 ? t("profit") : t("loss"),
                         ]}
                         labelFormatter={(v) => new Date(v).toLocaleDateString()}
                       />
@@ -284,17 +280,17 @@ export default function AnalyticsPage() {
             <GlassCard>
               <div className="flex items-center gap-3 mb-5">
                 <Calendar className="h-5 w-5 text-pink-400" />
-                <h2 className="text-base font-bold text-white">Performance Summary</h2>
+                <h2 className="text-base font-bold text-white">{t("performanceSummary")}</h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "This Week", value: data.statistics.weeklyProfitPct, fmt: formatPercent },
-                  { label: "This Month", value: data.statistics.monthlyProfitPct, fmt: formatPercent },
-                  { label: "This Year", value: data.statistics.yearlyProfitPct, fmt: formatPercent },
-                  { label: "All Time", value: data.statistics.totalProfitPct, fmt: formatPercent },
+                  { labelKey: "thisWeek" as const, value: data.statistics.weeklyProfitPct, fmt: formatPercent },
+                  { labelKey: "thisMonth" as const, value: data.statistics.monthlyProfitPct, fmt: formatPercent },
+                  { labelKey: "thisYear" as const, value: data.statistics.yearlyProfitPct, fmt: formatPercent },
+                  { labelKey: "allTime" as const, value: data.statistics.totalProfitPct, fmt: formatPercent },
                 ].map((item) => (
-                  <div key={item.label} className="glass-card p-4 text-center">
-                    <p className="text-xs text-slate-500 mb-1">{item.label}</p>
+                  <div key={item.labelKey} className="glass-card p-4 text-center">
+                    <p className="text-xs text-slate-500 mb-1">{t(item.labelKey)}</p>
                     <p
                       className={`text-xl font-black font-mono ${
                         item.value >= 0 ? "text-cyan-300" : "text-pink-400"
@@ -312,8 +308,8 @@ export default function AnalyticsPage() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <div className="flex items-center gap-3 mb-4">
               <BarChart3 className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-base font-bold text-white">Complete Statistics</h2>
-              <span className="badge badge-cyan ml-auto">21 metrics</span>
+              <h2 className="text-base font-bold text-white">{t("completeStats")}</h2>
+              <span className="badge badge-cyan ml-auto">23 {t("metrics")}</span>
             </div>
             <StatsGrid stats={data.statistics} />
           </motion.div>
