@@ -10,12 +10,8 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   try {
-    console.log("[DashboardLayout] Rendering layout...");
-    // TEMPORARY DEBUG: Disable auth redirect
-    // const session = await getSession();
-    // if (!session) redirect("/login");
-
-    const session = { username: "DebugUser" };
+    const session = await getSession();
+    if (!session) redirect("/login");
 
     return (
       <div className="min-h-screen">
@@ -34,9 +30,9 @@ export default async function DashboardLayout({
     return (
       <div className="p-10 text-red-500">
         <h1>Dashboard Layout Crash</h1>
-        <pre>{error instanceof Error ? error.stack : String(error)}</pre>
+        <p>A fatal error occurred loading the dashboard layout.</p>
+        <pre className="mt-4 text-xs bg-black p-4 rounded">{error instanceof Error ? error.stack : String(error)}</pre>
       </div>
     );
   }
 }
-

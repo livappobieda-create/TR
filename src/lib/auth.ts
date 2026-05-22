@@ -45,19 +45,10 @@ export async function verifySession(
 
 export async function getSession(): Promise<SessionPayload | null> {
   try {
-    console.log("[Auth] getSession called");
-    // TEMPORARY DEBUG: Always return a dummy session to bypass auth
-    return {
-      userId: "debug-user-id",
-      username: "debug-user",
-      email: "debug@test.com",
-    };
-    /*
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
     if (!token) return null;
     return verifySession(token);
-    */
   } catch (error) {
     console.error("[Auth] CRITICAL ERROR in getSession:", error);
     return null;

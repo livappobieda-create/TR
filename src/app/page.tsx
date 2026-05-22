@@ -1,3 +1,3 @@
-export default function Page() {
-  return <div>Render Debug Success</div>
+export default function Home() {
+  return null;
 }
