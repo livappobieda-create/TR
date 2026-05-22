@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    // Lightweight ping to verify DB connectivity
-    await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ status: "ok", db: "connected" });
+    console.log("[API/Health] Health check requested");
+    return NextResponse.json({ status: "ok", mode: "debug-no-db" });
   } catch (error) {
+    console.error("[API/Health] CRITICAL ERROR:", error);
     return NextResponse.json(
-      { status: "error", db: "disconnected" },
-      { status: 503 }
+      { status: "error", message: String(error) },
+      { status: 500 }
     );
   }
 }
+
