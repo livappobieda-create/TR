@@ -84,16 +84,14 @@ export function EditAccountModal({ account, open, onClose, onSaved }: EditAccoun
           accountType: form.accountType,
           isFunded: form.isFunded,
           propFirmName: form.propFirmName,
-          challengeSize: form.challengeSize ? Number(form.challengeSize) : null,
-          profitTarget: form.profitTarget ? Number(form.profitTarget) : null,
-          dailyDrawdownLimit: form.dailyDrawdownLimit ? Number(form.dailyDrawdownLimit) : null,
-          maxDrawdownLimit: form.maxDrawdownLimit ? Number(form.maxDrawdownLimit) : null,
-          currentDrawdown: form.currentDrawdown ? Number(form.currentDrawdown) : null,
-          currentProfitProgress: form.currentProfitProgress
-            ? Number(form.currentProfitProgress)
-            : null,
+          challengeSize: form.challengeSize ?? null,
+          profitTarget: form.profitTarget ?? null,
+          dailyDrawdownLimit: form.dailyDrawdownLimit ?? null,
+          maxDrawdownLimit: form.maxDrawdownLimit ?? null,
+          currentDrawdown: form.currentDrawdown ?? 0,
+          currentProfitProgress: form.currentProfitProgress ?? 0,
           phase: form.phase,
-          phaseDaysRemaining: form.phaseDaysRemaining ? Number(form.phaseDaysRemaining) : null,
+          phaseDaysRemaining: form.phaseDaysRemaining ?? 30,
           notes: form.notes,
           transaction: (adjType === "DEPOSIT" || adjType === "WITHDRAWAL") && Number(adjAmount) > 0 ? {
             type: adjType,

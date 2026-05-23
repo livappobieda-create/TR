@@ -53,19 +53,23 @@ export async function PATCH(
       const num = Number(v);
       return isNaN(num) ? null : num;
     };
+    const requiredNum = (v: unknown, fallback: number = 0) => {
+      if (v === null || v === "" || v === undefined) return fallback;
+      const num = Number(v);
+      return isNaN(num) ? fallback : num;
+    };
 
     if ("propFirmName" in body) data.propFirmName = body.propFirmName || null;
     if ("challengeSize" in body) data.challengeSize = nullableNum(body.challengeSize);
     if ("profitTarget" in body) data.profitTarget = nullableNum(body.profitTarget);
     if ("dailyDrawdownLimit" in body) data.dailyDrawdownLimit = nullableNum(body.dailyDrawdownLimit);
     if ("maxDrawdownLimit" in body) data.maxDrawdownLimit = nullableNum(body.maxDrawdownLimit);
-    if ("currentDrawdown" in body) data.currentDrawdown = nullableNum(body.currentDrawdown);
-    if ("currentProfitProgress" in body)
-      data.currentProfitProgress = nullableNum(body.currentProfitProgress);
+    if ("currentDrawdown" in body) data.currentDrawdown = requiredNum(body.currentDrawdown, 0);
+    if ("currentProfitProgress" in body) data.currentProfitProgress = requiredNum(body.currentProfitProgress, 0);
     if (body.phase !== undefined) data.phase = body.phase as AccountPhase;
+    
     if (body.phaseDaysRemaining !== undefined) {
-      const days = Number(body.phaseDaysRemaining);
-      data.phaseDaysRemaining = isNaN(days) ? null : days;
+      data.phaseDaysRemaining = requiredNum(body.phaseDaysRemaining, 30);
     }
 
     if (data.isFunded === false) {
@@ -74,9 +78,9 @@ export async function PATCH(
       data.profitTarget = null;
       data.dailyDrawdownLimit = null;
       data.maxDrawdownLimit = null;
-      data.currentDrawdown = null;
-      data.currentProfitProgress = null;
-      data.phaseDaysRemaining = null;
+      data.currentDrawdown = 0;
+      data.currentProfitProgress = 0;
+      data.phaseDaysRemaining = 30;
       data.phase = "FUNDED";
     }
 
