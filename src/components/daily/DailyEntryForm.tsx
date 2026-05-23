@@ -16,6 +16,7 @@ import { NeonInput } from "@/components/ui/NeonInput";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { computeDailyMetrics } from "@/lib/stats";
 import { formatCurrency, formatPercent } from "@/lib/utils";
+import { useLang } from "@/context/LangContext";
 
 interface DailyEntryFormProps {
   accountId: string;
@@ -28,6 +29,7 @@ export function DailyEntryForm({
   defaultStartBalance = 0,
   onSaved,
 }: DailyEntryFormProps) {
+  const { t, isArabic } = useLang();
   const [startBalance, setStartBalance] = useState(
     String(defaultStartBalance || "")
   );
@@ -101,6 +103,7 @@ export function DailyEntryForm({
           ? "border-pink-500/20"
           : ""
       }`}
+      dir={isArabic ? "rtl" : "ltr"}
     >
       {/* Top accent */}
       <div
@@ -118,7 +121,7 @@ export function DailyEntryForm({
 
       <div className="flex items-center gap-3 mb-6">
         <div
-          className="p-2 rounded-xl"
+          className="p-2 rounded-xl shrink-0"
           style={{
             background: "linear-gradient(135deg, rgba(0,245,255,0.15), rgba(176,38,255,0.15))",
             border: "1px solid rgba(0,245,255,0.2)",
@@ -127,21 +130,21 @@ export function DailyEntryForm({
           <Zap className="h-5 w-5 text-cyan-400" />
         </div>
         <div>
-          <h2 className="text-xl font-black text-gradient">One-Click Daily Entry</h2>
-          <p className="text-xs text-slate-500">Ctrl+Enter to save instantly</p>
+          <h2 className="text-xl font-black text-gradient">{t("oneClickEntry")}</h2>
+          <p className="text-xs text-slate-500">{t("oneClickHint")}</p>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3 mb-4">
         <NeonInput
-          label="Date"
+          label={t("date")}
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
           icon={<Calendar className="h-4 w-4" />}
         />
         <NeonInput
-          label="Start Balance"
+          label={t("startBalance")}
           type="number"
           step="0.01"
           value={startBalance}
@@ -151,7 +154,7 @@ export function DailyEntryForm({
           icon={<DollarSign className="h-4 w-4" />}
         />
         <NeonInput
-          label="End Balance"
+          label={t("endBalance")}
           type="number"
           step="0.01"
           value={endBalance}
@@ -180,7 +183,7 @@ export function DailyEntryForm({
                   : "bg-pink-500/5 border border-pink-500/20"
               }`}
             >
-              <p className="text-xs text-slate-500 mb-1">Daily P&L</p>
+              <p className="text-xs text-slate-500 mb-1">{t("dailyPnl")}</p>
               <p
                 className={`text-4xl font-black font-mono ${
                   metrics.dailyPnl >= 0 ? "text-green-400" : "text-pink-400"
@@ -210,32 +213,32 @@ export function DailyEntryForm({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 {
-                  label: "Equity Change",
+                  labelKey: "equityChange",
                   value: metrics.equityChange,
                   fmt: formatCurrency,
                   pos: metrics.equityChange >= 0,
                 },
                 {
-                  label: "Daily %",
+                  labelKey: "dailyPct",
                   value: metrics.dailyPnlPct,
                   fmt: formatPercent,
                   pos: metrics.dailyPnlPct >= 0,
                 },
                 {
-                  label: "Est. Weekly",
+                  labelKey: "estWeekly",
                   value: weeklyEst,
                   fmt: formatPercent,
                   pos: weeklyEst >= 0,
                 },
                 {
-                  label: "Est. Monthly",
+                  labelKey: "estMonthly",
                   value: monthlyEst,
                   fmt: formatPercent,
                   pos: monthlyEst >= 0,
                 },
               ].map((item) => (
                 <div
-                  key={item.label}
+                  key={item.labelKey}
                   className="glass-card p-3 flex items-center gap-2"
                 >
                   {item.pos ? (
@@ -243,10 +246,12 @@ export function DailyEntryForm({
                   ) : (
                     <TrendingDown className="h-3.5 w-3.5 text-pink-400 shrink-0" />
                   )}
-                  <div>
-                    <p className="text-xs text-slate-500">{item.label}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-500 truncate text-start">
+                      {t(item.labelKey as any)}
+                    </p>
                     <p
-                      className={`font-mono font-bold text-sm ${
+                      className={`font-mono font-bold text-sm text-start ${
                         item.pos ? "text-green-400" : "text-pink-400"
                       }`}
                     >
@@ -279,18 +284,18 @@ export function DailyEntryForm({
               transition={{ type: "spring", stiffness: 500, damping: 20 }}
               className="flex items-center gap-2"
             >
-              <Check className="h-5 w-5" />
-              Entry Saved! Dashboard updating...
+              <Check className="h-5 w-5 shrink-0" />
+              {t("entrySaved")}
             </motion.span>
           ) : saving ? (
             <motion.span key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-              <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-              Saving...
+              <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin shrink-0" />
+              {t("saving")}
             </motion.span>
           ) : (
             <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              Save & Refresh Dashboard
+              <Zap className="h-4 w-4 shrink-0" />
+              {t("saveRefresh")}
             </motion.span>
           )}
         </AnimatePresence>
@@ -298,7 +303,7 @@ export function DailyEntryForm({
 
       {!endBalance && (
         <p className="text-center text-xs text-slate-600 mt-2">
-          Press Ctrl+Enter to save once end balance is entered
+          {t("oneClickHint")}
         </p>
       )}
     </GlassCard>

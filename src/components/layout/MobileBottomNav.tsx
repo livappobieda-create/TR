@@ -8,6 +8,7 @@ import {
   PenLine,
   BarChart2,
   Play,
+  ShieldAlert,
 } from "lucide-react";
 import { useLang } from "@/context/LangContext";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", icon: LayoutDashboard, labelKey: "dashboard" },
   { href: "/daily-entry", icon: PenLine, labelKey: "entry" },
   { href: "/analytics", icon: BarChart2, labelKey: "stats" },
+  { href: "/risk", icon: ShieldAlert, labelKey: "risk" },
   { href: "/equity-replay", icon: Play, labelKey: "replay" },
 ] as const;
 

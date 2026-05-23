@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";
@@ -25,6 +26,7 @@ const LINKS = [
   { href: "/daily-entry", labelKey: "dailyEntry", icon: PenLine, shortLabelKey: "entry" },
   { href: "/analytics", labelKey: "analytics", icon: BarChart3, shortLabelKey: "stats" },
   { href: "/equity-replay", labelKey: "equityReplay", icon: Play, shortLabelKey: "replay" },
+  { href: "/risk", labelKey: "risk", icon: ShieldAlert, shortLabelKey: "risk" },
 ] as const;
 
 export function DashboardNav({ username }: { username?: string }) {

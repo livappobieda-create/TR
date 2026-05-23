@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  const filterByPeriod = (curve: Array<{ date: string; balance: number; pnl: number; pnlPct: number }> | undefined) => {
+  const filterByPeriod = (curve: Array<{ date: string; balance: number; pnl: number }> | undefined) => {
     if (!curve || period === "all") return curve ?? [];
     const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
     const cutoff = new Date();
@@ -284,23 +284,23 @@ export default function AnalyticsPage() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { labelKey: "thisWeek" as const, value: data.statistics.weeklyProfitPct, fmt: formatPercent },
-                  { labelKey: "thisMonth" as const, value: data.statistics.monthlyProfitPct, fmt: formatPercent },
-                  { labelKey: "thisYear" as const, value: data.statistics.yearlyProfitPct, fmt: formatPercent },
-                  { labelKey: "allTime" as const, value: data.statistics.totalProfitPct, fmt: formatPercent },
+                  { labelKey: "expectedNextWeek", value: data.statistics.expectedBalanceNextWeek, fmt: formatCurrency, color: "text-cyan-300" },
+                  { labelKey: "expectedWeeklyProfit", value: data.statistics.expectedWeeklyProfit, fmt: formatCurrency, color: "text-green-400" },
+                  { labelKey: "expectedNextMonth", value: data.statistics.expectedBalanceNextMonth, fmt: formatCurrency, color: "text-purple-400" },
+                  { labelKey: "expectedMonthlyProfit", value: data.statistics.expectedMonthlyProfit, fmt: formatCurrency, color: "text-green-400" },
                 ].map((item) => (
                   <div key={item.labelKey} className="glass-card p-4 text-center">
-                    <p className="text-xs text-slate-500 mb-1">{t(item.labelKey)}</p>
-                    <p
-                      className={`text-xl font-black font-mono ${
-                        item.value >= 0 ? "text-cyan-300" : "text-pink-400"
-                      }`}
-                    >
+                    <p className="text-xs text-slate-500 mb-1">{t(item.labelKey as any) || item.labelKey}</p>
+                    <p className={`text-xl font-black font-mono ${item.color}`}>
                       <AnimatedNumber value={item.value} format={item.fmt} />
                     </p>
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-slate-500 text-center mt-3 flex items-center justify-center gap-1">
+                <TrendingUp className="h-3.5 w-3.5" />
+                {t("basedOnAvg") || "Based on smoothed growth factor"} <span className="font-bold text-slate-300">{formatPercent(data.statistics.weeklyCompoundGrowth)}</span>
+              </p>
             </GlassCard>
           </motion.div>
 
@@ -309,7 +309,7 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-3 mb-4">
               <BarChart3 className="h-5 w-5 text-cyan-400" />
               <h2 className="text-base font-bold text-white">{t("completeStats")}</h2>
-              <span className="badge badge-cyan ml-auto">23 {t("metrics")}</span>
+              <span className="badge badge-cyan ml-auto">20 {t("metrics")}</span>
             </div>
             <StatsGrid stats={data.statistics} />
           </motion.div>

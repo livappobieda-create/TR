@@ -54,6 +54,8 @@ model TradingAccount {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
   dailyEntries          DailyEntry[]
+  trades                Trade[]
+  transactions          Transaction[]
 
   @@index([userId])
 }
@@ -73,4 +75,59 @@ model DailyEntry {
 
   @@unique([accountId, date])
   @@index([accountId])
+}
+
+enum TradeDirection {
+  BUY
+  SELL
+}
+
+enum TradeResult {
+  WIN
+  LOSS
+  BREAKEVEN
+}
+
+model Trade {
+  id             String         @id @default(cuid())
+  accountId      String
+  account        TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date           DateTime       @default(now())
+  symbol         String
+  direction      TradeDirection
+  lotSize        Float
+  entryPrice     Float
+  stopLoss       Float?
+  takeProfit     Float?
+  riskPercentage Float?
+  pnl            Float
+  rrRatio        Float?
+  result         TradeResult
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([accountId])
+  @@index([date])
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+model Transaction {
+  id        String          @id @default(cuid())
+  accountId String
+  account   TradingAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date      DateTime        @default(now())
+  type      TransactionType
+  amount    Float
+  status    String          @default("COMPLETED")
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([accountId])
+  @@index([date])
 }

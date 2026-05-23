@@ -17,15 +17,14 @@ import { PhaseTracker } from "@/components/accounts/PhaseTracker";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { EditAccountModal } from "@/components/accounts/EditAccountModal";
 import { DeleteAccountModal } from "@/components/accounts/DeleteAccountModal";
+import { ResetAccountModal } from "@/components/accounts/ResetAccountModal";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useSelectedAccount } from "@/hooks/useSelectedAccount";
 import { useStats } from "@/hooks/useStats";
 import { useLang } from "@/context/LangContext";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import {
-  PenLine,
   BarChart3,
-  Play,
   TrendingUp,
   TrendingDown,
   Activity,
@@ -37,6 +36,10 @@ import {
   Zap,
   Edit2,
   Trash2,
+  PenLine,
+  Play,
+  Copy,
+  RotateCcw
 } from "lucide-react";
 
 interface StatCardProps {
@@ -148,6 +151,7 @@ export default function DashboardPage() {
   const { t, isArabic } = useLang();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
 
   const selectedAccount = accounts.find((a) => a.id === selectedId);
 
@@ -229,7 +233,7 @@ export default function DashboardPage() {
             <RefreshCw className="h-4 w-4" />
           </button>
 
-          {/* Edit / Delete account buttons */}
+          {/* Account action buttons */}
           {selectedAccount && (
             <>
               <button
@@ -241,12 +245,38 @@ export default function DashboardPage() {
                 <span className="hidden sm:inline">{t("editAccount")}</span>
               </button>
               <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/accounts/${selectedAccount.id}`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "DUPLICATE" })
+                    });
+                    if (res.ok) {
+                      refresh(); // Refresh accounts list
+                    }
+                  } catch (e) {
+                    console.error("Failed to duplicate account", e);
+                  }
+                }}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-purple-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-purple-500/5 border border-transparent hover:border-purple-500/20"
+                title={t("duplicateAccount") || "Duplicate"}
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setResetOpen(true)}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-orange-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-orange-500/5 border border-transparent hover:border-orange-500/20"
+                title={t("resetAccountTitle") || "Reset"}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+              <button
                 onClick={() => setDeleteOpen(true)}
                 className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-pink-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-pink-500/5 border border-transparent hover:border-pink-500/20"
                 title={t("deleteAccount")}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t("deleteAccount")}</span>
               </button>
             </>
           )}
@@ -276,20 +306,20 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <StatCard
               label={t("currentBalance")}
-              value={account!.currentBalance}
+              value={stats.currentBalance}
               format={formatCurrency}
-              positive={account!.currentBalance >= account!.initialBalance}
+              positive={stats.currentBalance >= account!.initialBalance}
               icon={<Activity className="h-4 w-4" />}
               delay={0}
               accentColor="cyan"
             />
             <StatCard
               label={t("totalPnl")}
-              value={stats.totalPnl}
+              value={stats.netProfit}
               format={formatCurrency}
               icon={<Activity className="h-4 w-4" />}
               delay={0.05}
-              accentColor={stats.totalPnl >= 0 ? "green" : "pink"}
+              accentColor={stats.netProfit >= 0 ? "green" : "pink"}
             />
             <StatCard
               label={t("winRate")}
@@ -301,11 +331,11 @@ export default function DashboardPage() {
             />
             <StatCard
               label={t("accountGrowth")}
-              value={stats.accountGrowth}
+              value={stats.equityGrowthPct}
               format={formatPercent}
               icon={<TrendingUp className="h-4 w-4" />}
               delay={0.15}
-              accentColor={stats.accountGrowth >= 0 ? "cyan" : "pink"}
+              accentColor={stats.equityGrowthPct >= 0 ? "cyan" : "pink"}
             />
           </div>
 
@@ -314,8 +344,8 @@ export default function DashboardPage() {
             {[
               { label: t("maxDrawdown"), value: stats.maxDrawdown, fmt: formatPercent, color: "text-orange-400" },
               { label: t("profitFactor"), value: Number.isFinite(stats.profitFactor) ? stats.profitFactor : 0, fmt: (n: number) => n >= 99 ? "∞" : n.toFixed(2), color: "text-cyan-300" },
-              { label: t("weeklyPct"), value: stats.weeklyProfitPct, fmt: formatPercent, color: stats.weeklyProfitPct >= 0 ? "text-green-400" : "text-pink-400" },
-              { label: t("monthlyPct"), value: stats.monthlyProfitPct, fmt: formatPercent, color: stats.monthlyProfitPct >= 0 ? "text-green-400" : "text-pink-400" },
+              { label: t("weeklyPct"), value: stats.weeklyCompoundGrowth, fmt: formatPercent, color: stats.weeklyCompoundGrowth >= 0 ? "text-green-400" : "text-pink-400" },
+              { label: t("monthlyPct"), value: stats.monthlyCompoundGrowth, fmt: formatPercent, color: stats.monthlyCompoundGrowth >= 0 ? "text-green-400" : "text-pink-400" },
             ].map((item, i) => (
               <motion.div
                 key={item.label}
@@ -379,6 +409,7 @@ export default function DashboardPage() {
                         tickLine={false}
                         axisLine={false}
                         width={50}
+                        domain={["auto", "auto"]}
                       />
                       <Tooltip
                         contentStyle={{
@@ -421,7 +452,7 @@ export default function DashboardPage() {
                     {t("phaseTracker")} — {account.phase.replace(/_/g, " ")}
                   </h2>
                   {account.isFunded && (
-                    <span className="badge badge-cyan ml-auto">{t("fundedLabel")}</span>
+                     <span className="badge badge-cyan ml-auto">{t("fundedLabel")}</span>
                   )}
                 </div>
                 <PhaseTracker
@@ -482,9 +513,9 @@ export default function DashboardPage() {
         >
           {[
             { label: t("consistencyScore"), value: stats.consistencyScore.toFixed(0), suffix: "/100" },
-            { label: t("avgWinDay"), value: formatCurrency(stats.avgDailyGain) },
-            { label: t("maxWinStreak"), value: String(stats.maxConsecutiveWins), suffix: ` ${t("tradingDays")}` },
-            { label: t("riskExposure"), value: formatPercent(stats.riskExposure) },
+            { label: t("avgWinDay"), value: formatCurrency(stats.averageWin) },
+            { label: t("maxWinStreak"), value: String(stats.winningStreak), suffix: ` ${t("tradingDays")}` },
+            { label: t("riskExposure"), value: formatPercent(stats.currentDrawdown) },
           ].map((s) => (
             <div key={s.label}>
               <p className="text-xs text-slate-500 mb-0.5">{s.label}</p>
@@ -513,6 +544,14 @@ export default function DashboardPage() {
             open={deleteOpen}
             onClose={() => setDeleteOpen(false)}
             onDeleted={handleAccountDeleted}
+          />
+          <ResetAccountModal
+            account={selectedAccount}
+            open={resetOpen}
+            onClose={() => setResetOpen(false)}
+            onReset={(id) => {
+              refreshStats();
+            }}
           />
         </>
       )}

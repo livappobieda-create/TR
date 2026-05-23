@@ -40,8 +40,11 @@ const STEPS = [
   { label: "Preview & Launch", icon: Rocket },
 ];
 
+import { useLang } from "@/context/LangContext";
+
 export default function OnboardingPage() {
   const router = useRouter();
+  const { t, lang } = useLang();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -61,6 +64,25 @@ export default function OnboardingPage() {
     phase: "CHALLENGE_PHASE_1",
     phaseDaysRemaining: "30",
   });
+
+  const ACCOUNT_TYPES = [
+    { value: "PROP_FIRM", label: t.propFirm, icon: Building2, desc: t.propFirmDesc },
+    { value: "LIVE", label: t.live, icon: Activity, desc: t.liveDesc },
+    { value: "PERSONAL", label: t.personal, icon: User, desc: t.personalDesc },
+    { value: "DEMO", label: t.demo, icon: Wallet, desc: t.demoDesc },
+  ];
+
+  const PHASES = [
+    { value: "CHALLENGE_PHASE_1", label: t.phase1, desc: t.phase1Desc },
+    { value: "CHALLENGE_PHASE_2", label: t.phase2, desc: t.phase2Desc },
+    { value: "FUNDED", label: t.funded, desc: t.fundedDesc },
+  ];
+
+  const STEPS = [
+    { label: t.accountInfo || "Account Info", icon: Wallet },
+    { label: t.fundedDetails || "Funded Details", icon: Shield },
+    { label: t.previewLaunch || "Preview & Launch", icon: Rocket },
+  ];
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -118,20 +140,20 @@ export default function OnboardingPage() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Network error — please try again");
+      setError(t.error || "Network error — please try again");
     } finally {
       setLoading(false);
     }
   }
 
   const stepVariants = {
-    initial: (dir: number) => ({ opacity: 0, x: dir * 40 }),
+    initial: (dir: number) => ({ opacity: 0, x: dir * 40 * (lang === "ar" ? -1 : 1) }),
     animate: { opacity: 1, x: 0 },
-    exit: (dir: number) => ({ opacity: 0, x: -dir * 40 }),
+    exit: (dir: number) => ({ opacity: 0, x: -dir * 40 * (lang === "ar" ? -1 : 1) }),
   };
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative" dir={lang === "ar" ? "rtl" : "ltr"}>
       <FloatingBackground />
 
       <div className="max-w-2xl mx-auto px-4 py-10">
@@ -148,11 +170,11 @@ export default function OnboardingPage() {
             >
               <Zap className="h-7 w-7 text-cyan-400" />
             </div>
-            <span className="text-2xl font-black text-gradient tracking-wide">NEON TRADE</span>
+            <span className="text-2xl font-black text-gradient tracking-wide">{t.appName}</span>
           </div>
-          <h1 className="text-3xl font-black text-white mb-2">Set Up Your Account</h1>
+          <h1 className="text-3xl font-black text-white mb-2">{t.accountSetup}</h1>
           <p className="text-slate-400 text-sm">
-            Configure your trading account to unlock the full analytics engine
+            {t.accountSetupSubtitle}
           </p>
         </div>
 
@@ -233,70 +255,70 @@ export default function OnboardingPage() {
               <GlassCard>
                 <h2 className="text-lg font-bold text-cyan-300 flex items-center gap-2 mb-5">
                   <Wallet className="h-5 w-5" />
-                  Basic Account Info
+                  {t.accountSetup}
                 </h2>
 
                 <div className="space-y-4">
                   <NeonInput
-                    label="Account Name"
+                    label={t.accountName}
                     value={form.name}
                     onChange={(e) => update("name", e.target.value)}
                     required
-                    placeholder="FTMO 100K — Phase 1"
-                    hint="Give this account a descriptive name"
+                    placeholder={t.accountNamePlaceholder}
+                    hint={t.accountNameHint}
                   />
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <NeonInput
-                      label="Initial Balance ($)"
+                      label={t.initialBalance}
                       type="number"
                       value={form.initialBalance}
                       onChange={(e) => update("initialBalance", e.target.value)}
-                      hint="Starting capital"
+                      hint={t.initialBalanceHint}
                     />
                     <NeonInput
-                      label="Current Balance ($)"
+                      label={t.currentBalanceLabel}
                       type="number"
                       value={form.currentBalance}
                       onChange={(e) => update("currentBalance", e.target.value)}
-                      hint="Balance right now"
+                      hint={t.currentBalanceHint}
                     />
                   </div>
 
                   {/* Account type */}
                   <div>
                     <label className="text-sm text-cyan-300/80 font-medium block mb-2">
-                      Account Type
+                      {t.accountType}
                     </label>
                     <div className="grid grid-cols-2 gap-2">
-                      {ACCOUNT_TYPES.map((t) => {
-                        const Icon = t.icon;
+                      {ACCOUNT_TYPES.map((typeObj) => {
+                        const Icon = typeObj.icon;
                         return (
                           <button
-                            key={t.value}
+                            key={typeObj.value}
                             type="button"
-                            onClick={() => update("accountType", t.value)}
-                            className={`rounded-xl py-3 px-3 text-left border transition-all ${
-                              form.accountType === t.value
+                            onClick={() => update("accountType", typeObj.value)}
+                            className={`rounded-xl py-3 px-3 border transition-all ${
+                              form.accountType === typeObj.value
                                 ? "border-cyan-400 bg-cyan-500/10"
                                 : "border-slate-700/50 hover:border-slate-600"
-                            }`}
+                            } ${lang === "ar" ? "text-right" : "text-left"}`}
                           >
                             <div className="flex items-center gap-2 mb-0.5">
                               <Icon
                                 className={`h-4 w-4 ${
-                                  form.accountType === t.value ? "text-cyan-400" : "text-slate-500"
+                                  form.accountType === typeObj.value ? "text-cyan-400" : "text-slate-500"
                                 }`}
                               />
                               <span
                                 className={`text-sm font-semibold ${
-                                  form.accountType === t.value ? "text-cyan-200" : "text-slate-400"
+                                  form.accountType === typeObj.value ? "text-cyan-200" : "text-slate-400"
                                 }`}
                               >
-                                {t.label}
+                                {typeObj.label}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-600 pl-6">{t.desc}</p>
+                            <p className={`text-xs text-slate-600 ${lang === "ar" ? "pr-6" : "pl-6"}`}>{typeObj.desc}</p>
                           </button>
                         );
                       })}
@@ -306,12 +328,12 @@ export default function OnboardingPage() {
                   {/* Funded toggle */}
                   <div>
                     <label className="text-sm text-cyan-300/80 font-medium block mb-2">
-                      Is this a Funded / Challenge Account?
+                      {t.isFunded}
                     </label>
                     <div className="flex gap-2">
                       {[
-                        { value: "yes", label: "Yes — Prop Firm / Funded", icon: Shield },
-                        { value: "no", label: "No — Personal Account", icon: User },
+                        { value: "yes", label: t.yesFunded, icon: Shield },
+                        { value: "no", label: t.noPersonal, icon: User },
                       ].map(({ value, label, icon: Icon }) => (
                         <button
                           key={value}
@@ -327,7 +349,7 @@ export default function OnboardingPage() {
                         >
                           <Icon className="h-4 w-4" />
                           <span className="hidden sm:inline text-xs">{label}</span>
-                          <span className="sm:hidden capitalize">{value}</span>
+                          <span className="sm:hidden">{value === "yes" ? t.yesFunded : t.noPersonal}</span>
                         </button>
                       ))}
                     </div>
@@ -340,8 +362,8 @@ export default function OnboardingPage() {
                   disabled={!form.name}
                   className="neon-btn w-full flex items-center justify-center gap-2 mt-6"
                 >
-                  Continue
-                  <ChevronRight className="h-4 w-4" />
+                  {t.continue}
+                  <ChevronRight className="h-4 w-4 rtl:rotate-180" />
                 </button>
               </GlassCard>
             </motion.div>
@@ -362,57 +384,57 @@ export default function OnboardingPage() {
               <GlassCard>
                 <h2 className="text-lg font-bold text-purple-300 flex items-center gap-2 mb-5">
                   <Shield className="h-5 w-5" />
-                  Prop Firm Details
+                  {t.propFirmDetails}
                 </h2>
 
                 <div className="space-y-4">
                   <NeonInput
-                    label="Prop Firm Name"
+                    label={t.propFirmName}
                     value={form.propFirmName}
                     onChange={(e) => update("propFirmName", e.target.value)}
-                    placeholder="FTMO, Apex Trader, The Funded Trader..."
+                    placeholder={t.propFirmNamePlaceholder}
                   />
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <NeonInput
-                      label="Challenge Size ($)"
+                      label={t.challengeSize}
                       type="number"
                       value={form.challengeSize}
                       onChange={(e) => update("challengeSize", e.target.value)}
-                      hint="Total account size"
+                      hint={t.challengeSizeHint}
                     />
                     <NeonInput
-                      label="Profit Target ($)"
+                      label={t.profitTarget}
                       type="number"
                       value={form.profitTarget}
                       onChange={(e) => update("profitTarget", e.target.value)}
-                      hint="Required to pass"
+                      hint={t.profitTargetHint}
                     />
                     <NeonInput
-                      label="Daily Drawdown Limit (%)"
+                      label={t.dailyDrawdownLimit}
                       type="number"
                       step="0.1"
                       value={form.dailyDrawdownLimit}
                       onChange={(e) => update("dailyDrawdownLimit", e.target.value)}
-                      hint="Max daily loss %"
+                      hint={t.dailyDrawdownHint}
                     />
                     <NeonInput
-                      label="Maximum Drawdown Limit (%)"
+                      label={t.maxDrawdownLimit}
                       type="number"
                       step="0.1"
                       value={form.maxDrawdownLimit}
                       onChange={(e) => update("maxDrawdownLimit", e.target.value)}
-                      hint="Total max loss %"
+                      hint={t.maxDrawdownHint}
                     />
                     <NeonInput
-                      label="Current Drawdown (%)"
+                      label={t.currentDrawdown}
                       type="number"
                       step="0.1"
                       value={form.currentDrawdown}
                       onChange={(e) => update("currentDrawdown", e.target.value)}
                     />
                     <NeonInput
-                      label="Current Profit Progress ($)"
+                      label={t.currentProfitProgress}
                       type="number"
                       value={form.currentProfitProgress}
                       onChange={(e) => update("currentProfitProgress", e.target.value)}
@@ -422,7 +444,7 @@ export default function OnboardingPage() {
                   {/* Phase selector */}
                   <div>
                     <label className="text-sm text-cyan-300/80 font-medium block mb-2">
-                      Current Phase
+                      {t.currentPhase}
                     </label>
                     <div className="grid gap-2">
                       {PHASES.map((p) => (
@@ -430,11 +452,11 @@ export default function OnboardingPage() {
                           key={p.value}
                           type="button"
                           onClick={() => update("phase", p.value)}
-                          className={`rounded-xl py-3 px-4 text-left border flex items-center gap-3 transition-all ${
+                          className={`rounded-xl py-3 px-4 border flex items-center gap-3 transition-all ${
                             form.phase === p.value
                               ? "border-cyan-400 bg-cyan-500/10"
                               : "border-slate-700/50 hover:border-slate-600"
-                          }`}
+                          } ${lang === "ar" ? "text-right" : "text-left"}`}
                         >
                           <div
                             className={`h-2.5 w-2.5 rounded-full shrink-0 ${
@@ -457,11 +479,11 @@ export default function OnboardingPage() {
                   </div>
 
                   <NeonInput
-                    label="Phase Days Remaining"
+                    label={t.phaseDaysRemaining}
                     type="number"
                     value={form.phaseDaysRemaining}
                     onChange={(e) => update("phaseDaysRemaining", e.target.value)}
-                    hint="Calendar days left in this phase"
+                    hint={t.phaseDaysHint}
                   />
                 </div>
 
@@ -471,16 +493,16 @@ export default function OnboardingPage() {
                     onClick={() => setStep(0)}
                     className="neon-btn-outline flex-1 flex items-center justify-center gap-2"
                   >
-                    <ChevronLeft className="h-4 w-4" />
-                    Back
+                    <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+                    {t.backBtn}
                   </button>
                   <button
                     type="button"
                     onClick={() => setStep(2)}
                     className="neon-btn flex-1 flex items-center justify-center gap-2"
                   >
-                    Preview Tracker
-                    <ChevronRight className="h-4 w-4" />
+                    {t.previewTracker}
+                    <ChevronRight className="h-4 w-4 rtl:rotate-180" />
                   </button>
                 </div>
               </GlassCard>
@@ -504,7 +526,7 @@ export default function OnboardingPage() {
                 <GlassCard>
                   <h2 className="text-lg font-bold text-gradient flex items-center gap-2 mb-5">
                     <Shield className="h-5 w-5 text-cyan-400" />
-                    Phase Tracker Preview
+                    {t.phaseTrackerPreview}
                   </h2>
                   <PhaseTracker
                     currentPhase={form.phase}
@@ -528,27 +550,24 @@ export default function OnboardingPage() {
                   >
                     <Rocket className="h-10 w-10 text-cyan-400" />
                   </motion.div>
-                  <h2 className="text-2xl font-black text-white mb-2">Ready to Launch!</h2>
+                  <h2 className="text-2xl font-black text-white mb-2">{t.readyToLaunch}</h2>
                   <p className="text-slate-400 text-sm">
-                    Account{" "}
-                    <strong className="text-cyan-300">{form.name}</strong>
-                    {" "}will be created with a balance of{" "}
-                    <strong className="text-cyan-300">${form.currentBalance}</strong>.
+                    {t.launchDesc?.replace("{name}", form.name).replace("{balance}", form.currentBalance)}
                   </p>
                 </div>
 
                 {/* Summary */}
                 <div className="glass-card p-4 mb-5 space-y-2">
                   {[
-                    { label: "Account Type", value: form.accountType.replace("_", " ") },
-                    { label: "Initial Balance", value: `$${parseFloat(form.initialBalance).toLocaleString()}` },
-                    { label: "Current Balance", value: `$${parseFloat(form.currentBalance).toLocaleString()}` },
+                    { label: t.accountType, value: form.accountType.replace("_", " ") },
+                    { label: t.initialBalance, value: `$${parseFloat(form.initialBalance).toLocaleString()}` },
+                    { label: t.currentBalanceLabel, value: `$${parseFloat(form.currentBalance).toLocaleString()}` },
                     ...(isFunded ? [
-                      { label: "Prop Firm", value: form.propFirmName || "—" },
-                      { label: "Challenge Size", value: `$${parseFloat(form.challengeSize).toLocaleString()}` },
-                      { label: "Profit Target", value: `$${parseFloat(form.profitTarget).toLocaleString()}` },
-                      { label: "Phase", value: form.phase.replace(/_/g, " ") },
-                      { label: "Days Remaining", value: form.phaseDaysRemaining },
+                      { label: t.propFirm, value: form.propFirmName || "—" },
+                      { label: t.challengeSize, value: `$${parseFloat(form.challengeSize).toLocaleString()}` },
+                      { label: t.profitTarget, value: `$${parseFloat(form.profitTarget).toLocaleString()}` },
+                      { label: t.currentPhase, value: form.phase.replace(/_/g, " ") },
+                      { label: t.phaseDaysRemaining, value: form.phaseDaysRemaining },
                     ] : []),
                   ].map((row) => (
                     <div key={row.label} className="flex items-center justify-between text-sm">
@@ -570,8 +589,8 @@ export default function OnboardingPage() {
                     onClick={() => setStep(isFunded ? 1 : 0)}
                     className="neon-btn-outline flex-1 flex items-center justify-center gap-2"
                   >
-                    <ChevronLeft className="h-4 w-4" />
-                    Back
+                    <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+                    {t.backBtn}
                   </button>
                   <button
                     type="button"
@@ -582,12 +601,12 @@ export default function OnboardingPage() {
                     {loading ? (
                       <>
                         <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                        Creating...
+                        {t.creating}
                       </>
                     ) : (
                       <>
                         <Rocket className="h-4 w-4" />
-                        Launch Dashboard
+                        {t.launchDashboard}
                       </>
                     )}
                   </button>

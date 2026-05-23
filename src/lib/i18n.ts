@@ -34,6 +34,7 @@ export const translations = {
     entry: "Entry",
     stats: "Stats",
     replay: "Replay",
+    risk: "Risk",
 
     // ── Dashboard ────────────────────────────────────────────
     realtimeMath: "Real-time math analytics ",
@@ -241,6 +242,44 @@ export const translations = {
     statMonthlyCompounding: "Monthly Compounding",
 
     // ── Common ───────────────────────────────────────────────
+    // ── Trade Journal ────────────────────────────────────────
+    tradeJournal: "Trade Journal",
+    logTrade: "Log Trade",
+    symbol: "Symbol / Pair",
+    symbolPlaceholder: "EURUSD, XAUUSD...",
+    direction: "Direction",
+    buy: "Buy (Long)",
+    sell: "Sell (Short)",
+    lotSize: "Lot Size",
+    entryPrice: "Entry Price",
+    stopLoss: "Stop Loss",
+    takeProfit: "Take Profit",
+    riskPercentage: "Risk %",
+    pnl: "Profit / Loss ($)",
+    rrRatio: "Risk/Reward Ratio",
+    tradeResult: "Result",
+    win: "Win",
+    loss: "Loss",
+    breakeven: "Breakeven",
+    tradeSaved: "Trade logged successfully",
+    
+    // ── Transactions ─────────────────────────────────────────
+    transactions: "Transactions",
+    addTransaction: "Add Transaction",
+    deposit: "Deposit",
+    withdrawal: "Withdrawal",
+    amount: "Amount ($)",
+    transactionSaved: "Transaction recorded successfully",
+
+    // ── Future Projections ───────────────────────────────────
+    expectedNextWeek: "Expected Next Week",
+    expectedNextMonth: "Expected Next Month",
+    expectedNextYear: "Expected Next Year",
+    expectedWeeklyProfit: "Expected Weekly Profit",
+    expectedMonthlyProfit: "Expected Monthly Profit",
+    basedOnAvg: "Based on smoothed growth factor",
+
+    // ── Common ───────────────────────────────────────────────
     loading: "Loading...",
     error: "Error",
     success: "Success",
@@ -279,6 +318,7 @@ export const translations = {
     entry: "إدخال",
     stats: "إحصاء",
     replay: "إعادة",
+    risk: "مخاطرة",
 
     // ── Dashboard ────────────────────────────────────────────
     realtimeMath: "تحليلات رياضية فورية ",
@@ -484,6 +524,44 @@ export const translations = {
     statEquityGrowth: "نمو الأسهم",
     statWeeklyCompounding: "الفائدة المركبة الأسبوعية",
     statMonthlyCompounding: "الفائدة المركبة الشهرية",
+
+    // ── Common ───────────────────────────────────────────────
+    // ── Trade Journal ────────────────────────────────────────
+    tradeJournal: "سجل التداول",
+    logTrade: "تسجيل صفقة",
+    symbol: "الرمز / الزوج",
+    symbolPlaceholder: "EURUSD, XAUUSD...",
+    direction: "الاتجاه",
+    buy: "شراء (Long)",
+    sell: "بيع (Short)",
+    lotSize: "حجم العقد (Lot)",
+    entryPrice: "سعر الدخول",
+    stopLoss: "وقف الخسارة",
+    takeProfit: "أخذ الربح",
+    riskPercentage: "نسبة المخاطرة %",
+    pnl: "الربح / الخسارة ($)",
+    rrRatio: "نسبة المخاطرة/العائد",
+    tradeResult: "النتيجة",
+    win: "ربح",
+    loss: "خسارة",
+    breakeven: "تعادل",
+    tradeSaved: "تم تسجيل الصفقة بنجاح",
+    
+    // ── Transactions ─────────────────────────────────────────
+    transactions: "المعاملات المالية",
+    addTransaction: "إضافة معاملة",
+    deposit: "إيداع",
+    withdrawal: "سحب",
+    amount: "المبلغ ($)",
+    transactionSaved: "تم تسجيل المعاملة بنجاح",
+
+    // ── Future Projections ───────────────────────────────────
+    expectedNextWeek: "المتوقع الأسبوع القادم",
+    expectedNextMonth: "المتوقع الشهر القادم",
+    expectedNextYear: "المتوقع السنة القادمة",
+    expectedWeeklyProfit: "الربح الأسبوعي المتوقع",
+    expectedMonthlyProfit: "الربح الشهري المتوقع",
+    basedOnAvg: "بناءً على عامل النمو السلس",
 
     // ── Common ───────────────────────────────────────────────
     loading: "جاري التحميل...",

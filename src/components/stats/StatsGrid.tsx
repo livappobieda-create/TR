@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import type { FullStatistics } from "@/lib/stats";
+import type { AnalyticsMetrics } from "@/lib/analytics";
 import { useLang } from "@/context/LangContext";
 import type { TranslationKey } from "@/lib/i18n";
 import {
@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 interface StatItem {
-  key: keyof FullStatistics;
+  key: keyof AnalyticsMetrics;
   labelKey: TranslationKey;
   format: "currency" | "percent" | "number" | "ratio";
   icon: React.ReactNode;
@@ -29,29 +29,26 @@ interface StatItem {
 }
 
 const statItems: StatItem[] = [
-  { key: "totalPnl", labelKey: "statTotalPnl", format: "currency", icon: <Zap className="h-3.5 w-3.5" />, category: "profit" },
-  { key: "totalProfitPct", labelKey: "statTotalProfitPct", format: "percent", icon: <Percent className="h-3.5 w-3.5" />, category: "profit" },
-  { key: "dailyProfitPct", labelKey: "statDailyProfitPct", format: "percent", icon: <Activity className="h-3.5 w-3.5" />, category: "profit" },
-  { key: "weeklyProfitPct", labelKey: "statWeeklyProfitPct", format: "percent", icon: <Activity className="h-3.5 w-3.5" />, category: "profit" },
-  { key: "monthlyProfitPct", labelKey: "statMonthlyProfitPct", format: "percent", icon: <Activity className="h-3.5 w-3.5" />, category: "profit" },
-  { key: "yearlyProfitPct", labelKey: "statYearlyProfitPct", format: "percent", icon: <Activity className="h-3.5 w-3.5" />, category: "profit" },
+  { key: "netProfit", labelKey: "statTotalPnl", format: "currency", icon: <Zap className="h-3.5 w-3.5" />, category: "profit" },
+  { key: "grossProfit", labelKey: "statGrossProfit" as any, format: "currency", icon: <Activity className="h-3.5 w-3.5" />, category: "profit" },
+  { key: "grossLoss", labelKey: "statGrossLoss" as any, format: "currency", icon: <TrendingDown className="h-3.5 w-3.5" />, category: "risk" },
   { key: "winRate", labelKey: "statWinRate", format: "percent", icon: <Target className="h-3.5 w-3.5" />, category: "profit" },
   { key: "averageRR", labelKey: "statAvgRR", format: "ratio", icon: <BarChart2 className="h-3.5 w-3.5" />, category: "profit" },
-  { key: "drawdown", labelKey: "statCurrentDrawdown", format: "percent", icon: <TrendingDown className="h-3.5 w-3.5" />, category: "risk" },
+  { key: "currentDrawdown", labelKey: "statCurrentDrawdown", format: "percent", icon: <TrendingDown className="h-3.5 w-3.5" />, category: "risk" },
   { key: "maxDrawdown", labelKey: "statMaxDrawdown", format: "percent", icon: <Shield className="h-3.5 w-3.5" />, category: "risk" },
-  { key: "riskExposure", labelKey: "statRiskExposure", format: "percent", icon: <Shield className="h-3.5 w-3.5" />, category: "risk" },
   { key: "profitFactor", labelKey: "statProfitFactor", format: "ratio", icon: <BarChart2 className="h-3.5 w-3.5" />, category: "profit" },
   { key: "consistencyScore", labelKey: "statConsistency", format: "number", icon: <Activity className="h-3.5 w-3.5" />, category: "profit" },
-  { key: "avgDailyGain", labelKey: "statAvgDailyGain", format: "currency", icon: <TrendingUp className="h-3.5 w-3.5" />, category: "profit" },
-  { key: "avgDailyLoss", labelKey: "statAvgDailyLoss", format: "currency", icon: <TrendingDown className="h-3.5 w-3.5" />, category: "risk" },
-  { key: "maxConsecutiveWins", labelKey: "statMaxWinStreak", format: "number", icon: <Zap className="h-3.5 w-3.5" />, category: "streak" },
-  { key: "maxConsecutiveLosses", labelKey: "statMaxLossStreak", format: "number", icon: <Clock className="h-3.5 w-3.5" />, category: "streak" },
-  { key: "currentConsecutiveWins", labelKey: "statCurrentWinStreak", format: "number", icon: <Zap className="h-3.5 w-3.5" />, category: "streak" },
-  { key: "currentConsecutiveLosses", labelKey: "statCurrentLossStreak", format: "number", icon: <Clock className="h-3.5 w-3.5" />, category: "streak" },
-  { key: "accountGrowth", labelKey: "statAccountGrowth", format: "percent", icon: <TrendingUp className="h-3.5 w-3.5" />, category: "growth" },
-  { key: "equityGrowth", labelKey: "statEquityGrowth", format: "percent", icon: <TrendingUp className="h-3.5 w-3.5" />, category: "growth" },
-  { key: "weeklyCompounding", labelKey: "statWeeklyCompounding", format: "percent", icon: <RefreshCw className="h-3.5 w-3.5" />, category: "growth" },
-  { key: "monthlyCompounding", labelKey: "statMonthlyCompounding", format: "percent", icon: <RefreshCw className="h-3.5 w-3.5" />, category: "growth" },
+  { key: "averageWin", labelKey: "statAvgDailyGain", format: "currency", icon: <TrendingUp className="h-3.5 w-3.5" />, category: "profit" },
+  { key: "averageLoss", labelKey: "statAvgDailyLoss", format: "currency", icon: <TrendingDown className="h-3.5 w-3.5" />, category: "risk" },
+  { key: "totalTrades", labelKey: "statTotalTrades" as any, format: "number", icon: <BarChart2 className="h-3.5 w-3.5" />, category: "profit" },
+  { key: "winningTrades", labelKey: "statWinningTrades" as any, format: "number", icon: <Zap className="h-3.5 w-3.5" />, category: "streak" },
+  { key: "losingTrades", labelKey: "statLosingTrades" as any, format: "number", icon: <Clock className="h-3.5 w-3.5" />, category: "streak" },
+  { key: "winningStreak", labelKey: "statMaxWinStreak", format: "number", icon: <Zap className="h-3.5 w-3.5" />, category: "streak" },
+  { key: "losingStreak", labelKey: "statMaxLossStreak", format: "number", icon: <Clock className="h-3.5 w-3.5" />, category: "streak" },
+  { key: "currentStreak", labelKey: "statCurrentWinStreak", format: "number", icon: <Zap className="h-3.5 w-3.5" />, category: "streak" },
+  { key: "equityGrowthPct", labelKey: "statAccountGrowth", format: "percent", icon: <TrendingUp className="h-3.5 w-3.5" />, category: "growth" },
+  { key: "weeklyCompoundGrowth", labelKey: "statWeeklyCompounding", format: "percent", icon: <RefreshCw className="h-3.5 w-3.5" />, category: "growth" },
+  { key: "monthlyCompoundGrowth", labelKey: "statMonthlyCompounding", format: "percent", icon: <RefreshCw className="h-3.5 w-3.5" />, category: "growth" },
 ];
 
 function formatValue(value: number, format: string): string {
@@ -68,18 +65,18 @@ function formatValue(value: number, format: string): string {
   }
 }
 
-function isNegativeMetric(key: keyof FullStatistics): boolean {
+function isNegativeMetric(key: keyof AnalyticsMetrics): boolean {
   return (
-    key === "drawdown" ||
+    key === "currentDrawdown" ||
     key === "maxDrawdown" ||
-    key === "riskExposure" ||
-    key === "avgDailyLoss" ||
-    key === "maxConsecutiveLosses" ||
-    key === "currentConsecutiveLosses"
+    key === "averageLoss" ||
+    key === "losingStreak" ||
+    key === "grossLoss" ||
+    key === "losingTrades"
   );
 }
 
-export function StatsGrid({ stats }: { stats: FullStatistics }) {
+export function StatsGrid({ stats }: { stats: AnalyticsMetrics }) {
   const { t } = useLang();
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -96,6 +93,8 @@ export function StatsGrid({ stats }: { stats: FullStatistics }) {
           growth: "rgba(57,255,20,0.04)",
         };
 
+        const label = t(item.labelKey) || item.key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+
         return (
           <motion.div
             key={item.key}
@@ -108,7 +107,7 @@ export function StatsGrid({ stats }: { stats: FullStatistics }) {
               style={{ background: categoryColors[item.category] }}
             >
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-slate-500 truncate mr-2">{t(item.labelKey)}</p>
+                <p className="text-xs text-slate-500 truncate mr-2">{label}</p>
                 <span
                   className={`shrink-0 opacity-50 group-hover:opacity-100 transition-opacity ${
                     isPositiveDisplay ? "text-cyan-400" : "text-pink-400"

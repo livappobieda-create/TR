@@ -42,3 +42,27 @@ export const dailyEntrySchema = z.object({
   endBalance: z.coerce.number(),
   date: z.string().optional(),
 });
+
+export const tradeSchema = z.object({
+  accountId: z.string(),
+  date: z.string().optional(),
+  symbol: z.string().min(1),
+  direction: z.enum(["BUY", "SELL"]),
+  lotSize: z.coerce.number().positive(),
+  entryPrice: z.coerce.number().positive(),
+  stopLoss: z.coerce.number().positive().optional().nullable(),
+  takeProfit: z.coerce.number().positive().optional().nullable(),
+  riskPercentage: z.coerce.number().optional().nullable(),
+  pnl: z.coerce.number(),
+  rrRatio: z.coerce.number().optional().nullable(),
+  result: z.enum(["WIN", "LOSS", "BREAKEVEN"]),
+  notes: z.string().optional().nullable(),
+});
+
+export const transactionSchema = z.object({
+  accountId: z.string(),
+  date: z.string().optional(),
+  type: z.enum(["DEPOSIT", "WITHDRAWAL"]),
+  amount: z.coerce.number().positive(),
+  notes: z.string().optional().nullable(),
+});

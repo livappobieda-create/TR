@@ -85,13 +85,75 @@ export async function DELETE(
     });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // Delete all daily entries first (foreign key constraint)
+    // Delete all related records first (foreign key constraint)
+    await prisma.trade.deleteMany({ where: { accountId: id } });
+    await prisma.transaction.deleteMany({ where: { accountId: id } });
     await prisma.dailyEntry.deleteMany({ where: { accountId: id } });
+    
     await prisma.tradingAccount.delete({ where: { id } });
 
     return NextResponse.json({ success: true, deletedId: id });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+  }
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { id } = await params;
+    const existing = await prisma.tradingAccount.findFirst({
+      where: { id, userId: session.userId },
+    });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const body = await request.json();
+    const action = body.action;
+
+    if (action === "RESET") {
+      // Wipe trades and transactions, reset balance to initial
+      await prisma.trade.deleteMany({ where: { accountId: id } });
+      await prisma.transaction.deleteMany({ where: { accountId: id } });
+      await prisma.dailyEntry.deleteMany({ where: { accountId: id } });
+
+      const account = await prisma.tradingAccount.update({
+        where: { id },
+        data: { currentBalance: existing.initialBalance }
+      });
+      return NextResponse.json({ success: true, account });
+    }
+
+    if (action === "DUPLICATE") {
+      // Create a copy of the account settings (no trades/transactions)
+      const newAccount = await prisma.tradingAccount.create({
+        data: {
+          userId: session.userId,
+          name: `${existing.name} (Copy)`,
+          initialBalance: existing.initialBalance,
+          currentBalance: existing.initialBalance,
+          accountType: existing.accountType,
+          isFunded: existing.isFunded,
+          propFirmName: existing.propFirmName,
+          challengeSize: existing.challengeSize,
+          profitTarget: existing.profitTarget,
+          dailyDrawdownLimit: existing.dailyDrawdownLimit,
+          maxDrawdownLimit: existing.maxDrawdownLimit,
+          phase: existing.phase,
+          phaseDaysRemaining: existing.phaseDaysRemaining,
+        }
+      });
+      return NextResponse.json({ success: true, account: newAccount });
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Action failed" }, { status: 500 });
   }
 }

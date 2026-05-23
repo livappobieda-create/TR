@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { FullStatistics, PhaseProgress } from "@/lib/stats";
+import type { AnalyticsMetrics } from "@/lib/analytics";
+import type { PhaseProgress } from "@/lib/stats";
 
 export interface StatsResponse {
-  statistics: FullStatistics;
+  statistics: AnalyticsMetrics;
   phaseProgress: PhaseProgress | null;
   account: {
     id: string;
@@ -18,7 +19,6 @@ export interface StatsResponse {
     date: string;
     balance: number;
     pnl: number;
-    pnlPct: number;
   }[];
 }
 

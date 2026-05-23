@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  computeFullStatistics,
-  computePhaseProgress,
-  type DailyRecord,
-} from "@/lib/stats";
+import { calculateAnalytics } from "@/lib/analytics";
+import { computePhaseProgress } from "@/lib/stats";
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -19,32 +16,76 @@ export async function GET(request: Request) {
 
   const account = await prisma.tradingAccount.findFirst({
     where: { id: accountId, userId: session.userId },
-    include: { dailyEntries: { orderBy: { date: "asc" } } },
+    include: { 
+      trades: { orderBy: { date: "asc" } },
+      transactions: { orderBy: { date: "asc" } }
+    },
   });
 
   if (!account) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const records: DailyRecord[] = account.dailyEntries.map((e) => ({
-    date: e.date,
-    startBalance: e.startBalance,
-    endBalance: e.endBalance,
-    dailyPnl: e.dailyPnl,
-    dailyPnlPct: e.dailyPnlPct,
+  // Compute real statistics using the new engine
+  const statistics = calculateAnalytics(account, account.trades, account.transactions);
+
+  // Generate an Equity Curve purely from trades/transactions
+  // We'll create a snapshot per day
+  type TimelineEvent = 
+    | { type: "TRADE"; date: Date; pnl: number }
+    | { type: "TRANSACTION"; date: Date; amount: number; txType: string };
+
+  const timeline: TimelineEvent[] = [
+    ...account.trades.map(t => ({ type: "TRADE" as const, date: t.date, pnl: t.pnl })),
+    ...account.transactions.map(tx => ({ 
+      type: "TRANSACTION" as const, 
+      date: tx.date, 
+      amount: tx.amount, 
+      txType: tx.type 
+    }))
+  ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  let currentEquity = account.initialBalance;
+  let dailySnapshots: Record<string, { balance: number, pnl: number }> = {};
+
+  for (const event of timeline) {
+    const dayStr = event.date.toISOString().substring(0, 10);
+    
+    if (event.type === "TRADE") {
+      currentEquity += event.pnl;
+      if (!dailySnapshots[dayStr]) dailySnapshots[dayStr] = { balance: currentEquity, pnl: 0 };
+      dailySnapshots[dayStr].pnl += event.pnl;
+      dailySnapshots[dayStr].balance = currentEquity;
+    } else {
+      if (event.txType === "DEPOSIT") {
+        currentEquity += event.amount;
+      } else {
+        currentEquity -= event.amount;
+      }
+      if (!dailySnapshots[dayStr]) dailySnapshots[dayStr] = { balance: currentEquity, pnl: 0 };
+      dailySnapshots[dayStr].balance = currentEquity;
+    }
+  }
+
+  const equityCurve = Object.keys(dailySnapshots).sort().map(dateStr => ({
+    date: dateStr,
+    balance: dailySnapshots[dateStr].balance,
+    pnl: dailySnapshots[dateStr].pnl,
   }));
 
-  const statistics = computeFullStatistics(
-    records,
-    account.initialBalance,
-    account.currentBalance
-  );
+  // Add initial starting point if no trades yet, or just prefix it
+  if (equityCurve.length === 0 || equityCurve[0].date !== account.createdAt.toISOString().substring(0, 10)) {
+    equityCurve.unshift({
+      date: account.createdAt.toISOString().substring(0, 10),
+      balance: account.initialBalance,
+      pnl: 0
+    });
+  }
 
   let phaseProgress = null;
   if (account.isFunded && account.challengeSize) {
-    const todayEntry = account.dailyEntries[account.dailyEntries.length - 1];
-    const todayDrawdownPct =
-      todayEntry && todayEntry.dailyPnl < 0
-        ? Math.abs((todayEntry.dailyPnl / account.challengeSize) * 100)
-        : 0;
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const todayDrawdownPct = dailySnapshots[todayStr] && dailySnapshots[todayStr].pnl < 0
+      ? Math.abs((dailySnapshots[todayStr].pnl / account.challengeSize) * 100)
+      : 0;
 
     phaseProgress = computePhaseProgress({
       phase: account.phase,
@@ -66,15 +107,10 @@ export async function GET(request: Request) {
       id: account.id,
       name: account.name,
       initialBalance: account.initialBalance,
-      currentBalance: account.currentBalance,
+      currentBalance: statistics.currentBalance,
       isFunded: account.isFunded,
       phase: account.phase,
     },
-    equityCurve: account.dailyEntries.map((e) => ({
-      date: e.date.toISOString(),
-      balance: e.endBalance,
-      pnl: e.dailyPnl,
-      pnlPct: e.dailyPnlPct,
-    })),
+    equityCurve,
   });
 }
