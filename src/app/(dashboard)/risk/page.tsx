@@ -61,6 +61,8 @@ export default function RiskManagementPage() {
           currentBalance={data.account.currentBalance} 
           consistencyScore={data.statistics.consistencyScore} 
           winRate={data.statistics.winRate} 
+          weeklyCompoundGrowth={data.statistics.weeklyCompoundGrowth}
+          isFunded={data.account.isFunded}
         />
       )}
     </div>
