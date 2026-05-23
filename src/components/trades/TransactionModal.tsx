@@ -53,7 +53,7 @@ export function TransactionModal({ accountId, onClose }: TransactionModalProps) 
       router.refresh();
       onClose();
     } catch (err: any) {
-      setError(err.message || t.error);
+      setError(err.message || t("error"));
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export function TransactionModal({ accountId, onClose }: TransactionModalProps) 
           <div className="p-5 border-b border-white/5 flex items-center justify-between">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Wallet className="h-5 w-5 text-cyan-400" />
-              {t.addTransaction || "Add Transaction"}
+              {t("addTransaction") || "Add Transaction"}
             </h2>
             <button
               onClick={onClose}
@@ -78,7 +78,7 @@ export function TransactionModal({ accountId, onClose }: TransactionModalProps) 
 
           <div className="p-5 space-y-4">
             <NeonInput
-              label={t.date || "Date"}
+              label={t("date") || "Date"}
               type="date"
               value={form.date}
               onChange={(e) => update("date", e.target.value)}
@@ -99,7 +99,7 @@ export function TransactionModal({ accountId, onClose }: TransactionModalProps) 
                       : "border-slate-700/50 text-slate-400"
                   }`}
                 >
-                  {t.deposit || "Deposit"}
+                  {t("deposit") || "Deposit"}
                 </button>
                 <button
                   type="button"
@@ -110,13 +110,13 @@ export function TransactionModal({ accountId, onClose }: TransactionModalProps) 
                       : "border-slate-700/50 text-slate-400"
                   }`}
                 >
-                  {t.withdrawal || "Withdrawal"}
+                  {t("withdrawal") || "Withdrawal"}
                 </button>
               </div>
             </div>
 
             <NeonInput
-              label={t.amount || "Amount ($)"}
+              label={t("amount") || "Amount ($)"}
               type="number"
               step="0.01"
               value={form.amount}
@@ -125,7 +125,7 @@ export function TransactionModal({ accountId, onClose }: TransactionModalProps) 
             />
 
             <NeonInput
-              label={t.notes || "Notes"}
+              label={t("notes") || "Notes"}
               value={form.notes}
               onChange={(e) => update("notes", e.target.value)}
             />
@@ -153,7 +153,7 @@ export function TransactionModal({ accountId, onClose }: TransactionModalProps) 
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {t.saveChanges || "Save"}
+              {t("saveChanges") || "Save"}
             </button>
           </div>
         </GlassCard>

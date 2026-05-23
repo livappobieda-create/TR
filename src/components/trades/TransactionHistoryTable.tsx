@@ -2,7 +2,6 @@
 
 import { Transaction } from "@prisma/client";
 import { useLang } from "@/context/LangContext";
-import { format } from "date-fns";
 
 export function TransactionHistoryTable({ transactions }: { transactions: Transaction[] }) {
   const { t } = useLang();
@@ -10,7 +9,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Transa
   if (!transactions.length) {
     return (
       <div className="text-center py-10 text-slate-500">
-        {t.noData || "No transactions yet."}
+        {t("noData") || "No transactions yet."}
       </div>
     );
   }
@@ -20,16 +19,16 @@ export function TransactionHistoryTable({ transactions }: { transactions: Transa
       <table className="w-full text-left text-sm whitespace-nowrap">
         <thead>
           <tr className="border-b border-white/5 text-slate-400">
-            <th className="py-3 px-4 font-medium">{t.date || "Date"}</th>
-            <th className="py-3 px-4 font-medium">Type</th>
-            <th className="py-3 px-4 font-medium text-right">{t.amount || "Amount"}</th>
+            <th className="px-4 py-2 font-medium">{t("date") || "Date"}</th>
+            <th className="px-4 py-2 font-medium">Type</th>
+            <th className="px-4 py-2 font-medium text-right">{t("amount") || "Amount"}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
           {transactions.map((tx) => (
             <tr key={tx.id} className="hover:bg-white/5 transition-colors">
               <td className="py-3 px-4 text-slate-300">
-                {format(new Date(tx.date), "MMM d, yyyy")}
+                {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </td>
               <td className="py-3 px-4">
                 <span
@@ -39,7 +38,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Transa
                       : "bg-pink-500/10 text-pink-400"
                   }`}
                 >
-                  {tx.type}
+                  {t(tx.type.toLowerCase() as any) || tx.type}
                 </span>
               </td>
               <td

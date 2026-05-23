@@ -103,7 +103,6 @@ export function DailyEntryForm({
           ? "border-pink-500/20"
           : ""
       }`}
-      dir={isArabic ? "rtl" : "ltr"}
     >
       {/* Top accent */}
       <div

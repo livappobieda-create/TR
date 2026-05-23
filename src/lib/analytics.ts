@@ -28,6 +28,10 @@ export interface AnalyticsMetrics {
   expectedMonthlyProfit: number;
   expectedBalanceNextYear: number;
   currentBalance: number;
+  dailyProfitPct: number;
+  weeklyProfitPct: number;
+  monthlyProfitPct: number;
+  totalPnl: number;
 }
 
 export function calculateAnalytics(
@@ -204,6 +208,35 @@ export function calculateAnalytics(
   // Yearly uses 52 weeks
   const expectedBalanceNextYear = calculatedCurrentBalance * Math.pow(1 + effectiveWeeklyReturn, 52);
 
+  // 10. Period Profits (Today, This Week, This Month)
+  const nowTime = new Date().getTime();
+  const oneDayAgo = nowTime - (1000 * 60 * 60 * 24);
+  const sevenDaysAgo = nowTime - (1000 * 60 * 60 * 24 * 7);
+  const thirtyDaysAgo = nowTime - (1000 * 60 * 60 * 24 * 30);
+
+  const getBalanceAtTime = (cutoffTime: number) => {
+    let bal = initialBalance;
+    for (const event of timeline) {
+      if (event.date.getTime() <= cutoffTime) {
+        if (event.type === "TRADE") bal += event.pnl;
+        else if (event.type === "TRANSACTION") {
+          bal += event.txType === "DEPOSIT" ? event.amount : -event.amount;
+        }
+      } else {
+        break;
+      }
+    }
+    return bal;
+  };
+
+  const balanceOneDayAgo = getBalanceAtTime(oneDayAgo);
+  const balanceSevenDaysAgo = getBalanceAtTime(sevenDaysAgo);
+  const balanceThirtyDaysAgo = getBalanceAtTime(thirtyDaysAgo);
+
+  const dailyProfitPct = balanceOneDayAgo > 0 ? ((calculatedCurrentBalance - balanceOneDayAgo) / balanceOneDayAgo) * 100 : 0;
+  const weeklyProfitPct = balanceSevenDaysAgo > 0 ? ((calculatedCurrentBalance - balanceSevenDaysAgo) / balanceSevenDaysAgo) * 100 : 0;
+  const monthlyProfitPct = balanceThirtyDaysAgo > 0 ? ((calculatedCurrentBalance - balanceThirtyDaysAgo) / balanceThirtyDaysAgo) * 100 : 0;
+
   return {
     winRate,
     totalTrades,
@@ -231,6 +264,10 @@ export function calculateAnalytics(
     expectedBalanceNextMonth,
     expectedMonthlyProfit,
     expectedBalanceNextYear,
-    currentBalance: calculatedCurrentBalance
+    currentBalance: calculatedCurrentBalance,
+    dailyProfitPct,
+    weeklyProfitPct,
+    monthlyProfitPct,
+    totalPnl: netProfit,
   };
 }

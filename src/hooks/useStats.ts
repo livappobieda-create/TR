@@ -19,6 +19,7 @@ export interface StatsResponse {
     date: string;
     balance: number;
     pnl: number;
+    pnlPct: number;
   }[];
 }
 

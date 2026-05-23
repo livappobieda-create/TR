@@ -65,18 +65,26 @@ export async function GET(request: Request) {
     }
   }
 
-  const equityCurve = Object.keys(dailySnapshots).sort().map(dateStr => ({
-    date: dateStr,
-    balance: dailySnapshots[dateStr].balance,
-    pnl: dailySnapshots[dateStr].pnl,
-  }));
+  const equityCurve = Object.keys(dailySnapshots).sort().map(dateStr => {
+    const pnl = dailySnapshots[dateStr].pnl;
+    const balance = dailySnapshots[dateStr].balance;
+    const prevBalance = balance - pnl;
+    const pnlPct = prevBalance > 0 ? (pnl / prevBalance) * 100 : 0;
+    return {
+      date: dateStr,
+      balance,
+      pnl,
+      pnlPct,
+    };
+  });
 
   // Add initial starting point if no trades yet, or just prefix it
   if (equityCurve.length === 0 || equityCurve[0].date !== account.createdAt.toISOString().substring(0, 10)) {
     equityCurve.unshift({
       date: account.createdAt.toISOString().substring(0, 10),
       balance: account.initialBalance,
-      pnl: 0
+      pnl: 0,
+      pnlPct: 0,
     });
   }
 

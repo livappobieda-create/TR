@@ -67,7 +67,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
       router.refresh();
       onClose();
     } catch (err: any) {
-      setError(err.message || t.error);
+      setError(err.message || t("error"));
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
           <div className="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Target className="h-5 w-5 text-cyan-400" />
-              {t.logTrade || "Log Trade"}
+              {t("logTrade") || "Log Trade"}
             </h2>
             <button
               onClick={onClose}
@@ -95,17 +95,17 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
           <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <NeonInput
-                label={t.date || "Date"}
+                label={t("date") || "Date"}
                 type="date"
                 value={form.date}
                 onChange={(e) => update("date", e.target.value)}
                 required
               />
               <NeonInput
-                label={t.symbol || "Symbol / Pair"}
+                label={t("symbol") || "Symbol / Pair"}
                 value={form.symbol}
                 onChange={(e) => update("symbol", e.target.value)}
-                placeholder={t.symbolPlaceholder || "EURUSD, XAUUSD"}
+                placeholder={t("symbolPlaceholder") || "EURUSD, XAUUSD"}
                 required
               />
             </div>
@@ -113,7 +113,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-cyan-300/80 font-medium block mb-2">
-                  {t.direction || "Direction"}
+                  {t("direction") || "Direction"}
                 </label>
                 <div className="flex gap-2">
                   <button
@@ -125,7 +125,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
                         : "border-slate-700/50 text-slate-400"
                     }`}
                   >
-                    {t.buy || "Buy"}
+                    {t("buy") || "Buy"}
                   </button>
                   <button
                     type="button"
@@ -136,12 +136,12 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
                         : "border-slate-700/50 text-slate-400"
                     }`}
                   >
-                    {t.sell || "Sell"}
+                    {t("sell") || "Sell"}
                   </button>
                 </div>
               </div>
               <NeonInput
-                label={t.lotSize || "Lot Size"}
+                label={t("lotSize") || "Lot Size"}
                 type="number"
                 step="0.01"
                 value={form.lotSize}
@@ -152,7 +152,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
 
             <div className="grid grid-cols-3 gap-4">
               <NeonInput
-                label={t.entryPrice || "Entry Price"}
+                label={t("entryPrice") || "Entry Price"}
                 type="number"
                 step="0.00001"
                 value={form.entryPrice}
@@ -160,14 +160,14 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
                 required
               />
               <NeonInput
-                label={t.stopLoss || "Stop Loss"}
+                label={t("stopLoss") || "Stop Loss"}
                 type="number"
                 step="0.00001"
                 value={form.stopLoss}
                 onChange={(e) => update("stopLoss", e.target.value)}
               />
               <NeonInput
-                label={t.takeProfit || "Take Profit"}
+                label={t("takeProfit") || "Take Profit"}
                 type="number"
                 step="0.00001"
                 value={form.takeProfit}
@@ -177,7 +177,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
 
             <div className="grid grid-cols-3 gap-4">
               <NeonInput
-                label={t.pnl || "Profit/Loss ($)"}
+                label={t("pnl") || "Profit/Loss ($)"}
                 type="number"
                 step="0.01"
                 value={form.pnl}
@@ -185,14 +185,14 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
                 required
               />
               <NeonInput
-                label={t.riskPercentage || "Risk %"}
+                label={t("riskPercentage") || "Risk %"}
                 type="number"
                 step="0.01"
                 value={form.riskPercentage}
                 onChange={(e) => update("riskPercentage", e.target.value)}
               />
               <NeonInput
-                label={t.rrRatio || "Risk/Reward"}
+                label={t("rrRatio") || "Risk/Reward"}
                 type="number"
                 step="0.01"
                 value={form.rrRatio}
@@ -202,7 +202,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
 
             <div>
               <label className="text-sm text-cyan-300/80 font-medium block mb-2">
-                {t.tradeResult || "Result"}
+                {t("tradeResult") || "Result"}
               </label>
               <div className="flex gap-2">
                 <button
@@ -214,7 +214,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
                       : "border-slate-700/50 text-slate-400"
                   }`}
                 >
-                  {t.win || "Win"}
+                  {t("win") || "Win"}
                 </button>
                 <button
                   type="button"
@@ -225,7 +225,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
                       : "border-slate-700/50 text-slate-400"
                   }`}
                 >
-                  {t.loss || "Loss"}
+                  {t("loss") || "Loss"}
                 </button>
                 <button
                   type="button"
@@ -236,13 +236,13 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
                       : "border-slate-700/50 text-slate-400"
                   }`}
                 >
-                  {t.breakeven || "Breakeven"}
+                  {t("breakeven") || "Breakeven"}
                 </button>
               </div>
             </div>
 
             <NeonInput
-              label={t.notes || "Notes"}
+              label={t("notes") || "Notes"}
               value={form.notes}
               onChange={(e) => update("notes", e.target.value)}
             />
@@ -271,7 +271,7 @@ export function TradeEntryModal({ accountId, onClose }: TradeEntryModalProps) {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {t.saveChanges || "Save Trade"}
+              {t("saveChanges") || "Save Trade"}
             </button>
           </div>
         </GlassCard>
