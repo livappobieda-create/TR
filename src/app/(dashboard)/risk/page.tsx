@@ -28,10 +28,10 @@ export default function RiskManagementPage() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gradient">Risk Management</h1>
+          <h1 className="text-3xl font-black text-gradient">{t("riskManagement") || "Risk Management"}</h1>
           <p className="text-slate-500 text-sm mt-1 flex items-center gap-1.5">
             <ShieldAlert className="h-3.5 w-3.5" />
-            Professional lot sizing & compounding engine
+            {t("riskManagementDesc") || "Professional lot sizing & compounding engine"}
           </p>
         </div>
         <div className="flex items-center gap-3">
