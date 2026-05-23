@@ -1,4 +1,4 @@
-import { Trade, Transaction, TradingAccount, TradeResult } from "@prisma/client";
+import { Trade, Transaction, TradingAccount, TradeResult, DailyEntry } from "@prisma/client";
 
 export interface AnalyticsMetrics {
   winRate: number;
@@ -37,23 +37,35 @@ export interface AnalyticsMetrics {
 export function calculateAnalytics(
   account: TradingAccount,
   trades: Trade[],
-  transactions: Transaction[]
+  transactions: Transaction[],
+  dailyEntries: DailyEntry[] = []
 ): AnalyticsMetrics {
   const initialBalance = account.initialBalance;
 
+  // Merge Trades and DailyEntries to create a unified PnL timeline
+  // A DailyEntry is treated as a consolidated "trade" for the day
+  const allEvents = [
+    ...trades.map((t) => ({ pnl: t.pnl, result: t.result, date: t.date })),
+    ...dailyEntries.map((d) => ({
+      pnl: d.dailyPnl,
+      result: d.dailyPnl > 0 ? "WIN" : d.dailyPnl < 0 ? "LOSS" : "BREAKEVEN",
+      date: d.date,
+    })),
+  ];
+
   // 1. Basic Trade Counts
-  const totalTrades = trades.length;
-  const winningTrades = trades.filter((t) => t.result === "WIN").length;
-  const losingTrades = trades.filter((t) => t.result === "LOSS").length;
-  const breakevenTrades = trades.filter((t) => t.result === "BREAKEVEN").length;
+  const totalTrades = allEvents.length;
+  const winningTrades = allEvents.filter((t) => t.result === "WIN").length;
+  const losingTrades = allEvents.filter((t) => t.result === "LOSS").length;
+  const breakevenTrades = allEvents.filter((t) => t.result === "BREAKEVEN").length;
 
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
   // 2. Gross & Net Profit
-  const grossProfit = trades
+  const grossProfit = allEvents
     .filter((t) => t.pnl > 0)
     .reduce((sum, t) => sum + t.pnl, 0);
-  const grossLoss = trades
+  const grossLoss = allEvents
     .filter((t) => t.pnl < 0)
     .reduce((sum, t) => sum + Math.abs(t.pnl), 0);
   const netProfit = grossProfit - grossLoss;
@@ -72,11 +84,11 @@ export function calculateAnalytics(
   let tempWinStreak = 0;
   let tempLossStreak = 0;
 
-  // Sort trades chronologically
-  const sortedTrades = [...trades].sort((a, b) => a.date.getTime() - b.date.getTime());
+  // Sort events chronologically
+  const sortedEvents = [...allEvents].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  for (let i = 0; i < sortedTrades.length; i++) {
-    const t = sortedTrades[i];
+  for (let i = 0; i < sortedEvents.length; i++) {
+    const t = sortedEvents[i];
     if (t.result === "WIN") {
       tempWinStreak++;
       tempLossStreak = 0;
@@ -99,11 +111,11 @@ export function calculateAnalytics(
   // Start with initial balance, then apply deposits/withdrawals and trades in chronological order.
   // To be precise, we need a combined timeline.
   type TimelineEvent = 
-    | { type: "TRADE"; date: Date; pnl: number }
+    | { type: "TRADE_OR_ENTRY"; date: Date; pnl: number }
     | { type: "TRANSACTION"; date: Date; amount: number; txType: string };
 
   const timeline: TimelineEvent[] = [
-    ...sortedTrades.map(t => ({ type: "TRADE" as const, date: t.date, pnl: t.pnl })),
+    ...sortedEvents.map(e => ({ type: "TRADE_OR_ENTRY" as const, date: e.date, pnl: e.pnl })),
     ...transactions.map(tx => ({ 
       type: "TRANSACTION" as const, 
       date: tx.date, 
@@ -117,7 +129,7 @@ export function calculateAnalytics(
   let maxDrawdownPct = 0;
 
   for (const event of timeline) {
-    if (event.type === "TRADE") {
+    if (event.type === "TRADE_OR_ENTRY") {
       currentEquity += event.pnl;
     } else if (event.type === "TRANSACTION") {
       if (event.txType === "DEPOSIT") {
@@ -159,7 +171,7 @@ export function calculateAnalytics(
     : 0;
 
   // 7. Time-based metrics (Weekly/Monthly Compounding)
-  const firstTradeDate = sortedTrades.length > 0 ? sortedTrades[0].date : new Date();
+  const firstTradeDate = sortedEvents.length > 0 ? sortedEvents[0].date : new Date();
   const daysActive = Math.max(1, (new Date().getTime() - firstTradeDate.getTime()) / (1000 * 60 * 60 * 24));
   const weeksActive = Math.max(1, daysActive / 7);
   const monthsActive = Math.max(1, daysActive / 30.44);
@@ -218,7 +230,7 @@ export function calculateAnalytics(
     let bal = initialBalance;
     for (const event of timeline) {
       if (event.date.getTime() <= cutoffTime) {
-        if (event.type === "TRADE") bal += event.pnl;
+        if (event.type === "TRADE_OR_ENTRY") bal += event.pnl;
         else if (event.type === "TRANSACTION") {
           bal += event.txType === "DEPOSIT" ? event.amount : -event.amount;
         }

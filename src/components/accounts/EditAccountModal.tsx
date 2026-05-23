@@ -51,12 +51,17 @@ export function EditAccountModal({ account, open, onClose, onSaved }: EditAccoun
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  
+  const [adjType, setAdjType] = useState<"MANUAL" | "DEPOSIT" | "WITHDRAWAL">("MANUAL");
+  const [adjAmount, setAdjAmount] = useState("");
 
   useEffect(() => {
     if (open) {
       setForm({ ...account });
       setSuccess(false);
       setError("");
+      setAdjType("MANUAL");
+      setAdjAmount("");
     }
   }, [open, account]);
 
@@ -90,6 +95,10 @@ export function EditAccountModal({ account, open, onClose, onSaved }: EditAccoun
           phase: form.phase,
           phaseDaysRemaining: form.phaseDaysRemaining ? Number(form.phaseDaysRemaining) : null,
           notes: form.notes,
+          transaction: (adjType === "DEPOSIT" || adjType === "WITHDRAWAL") && Number(adjAmount) > 0 ? {
+            type: adjType,
+            amount: Number(adjAmount),
+          } : undefined
         }),
       });
       if (!res.ok) {
@@ -169,7 +178,7 @@ export function EditAccountModal({ account, open, onClose, onSaved }: EditAccoun
               </div>
 
               {/* Balances */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-cyan-400/70 uppercase tracking-wider">
                     {t("initialBalance")}
@@ -181,16 +190,64 @@ export function EditAccountModal({ account, open, onClose, onSaved }: EditAccoun
                     onChange={(e) => set("initialBalance", e.target.value)}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-cyan-400/70 uppercase tracking-wider">
-                    {t("currentBalanceLabel")}
+                
+                <div className="space-y-3 bg-slate-900/30 p-3 rounded-xl border border-slate-800">
+                  <label className="text-xs font-semibold text-cyan-400/70 uppercase tracking-wider flex justify-between">
+                    <span>{t("currentBalanceLabel")}</span>
+                    <span className="text-cyan-300 font-mono">${form.currentBalance}</span>
                   </label>
-                  <input
-                    className="neon-input"
-                    type="number"
-                    value={form.currentBalance}
-                    onChange={(e) => set("currentBalance", e.target.value)}
-                  />
+
+                  <div className="grid grid-cols-3 gap-1 p-1 bg-slate-900 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => { setAdjType("MANUAL"); setAdjAmount(""); }}
+                      className={`text-[10px] py-1 rounded transition-colors ${adjType === "MANUAL" ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      MANUAL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAdjType("DEPOSIT"); setAdjAmount(""); }}
+                      className={`text-[10px] py-1 rounded transition-colors ${adjType === "DEPOSIT" ? 'bg-green-500/20 text-green-400' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      DEPOSIT
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAdjType("WITHDRAWAL"); setAdjAmount(""); }}
+                      className={`text-[10px] py-1 rounded transition-colors ${adjType === "WITHDRAWAL" ? 'bg-pink-500/20 text-pink-400' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      WITHDRAWAL
+                    </button>
+                  </div>
+
+                  {adjType === "MANUAL" ? (
+                    <input
+                      className="neon-input"
+                      type="number"
+                      value={form.currentBalance}
+                      onChange={(e) => set("currentBalance", e.target.value)}
+                      placeholder="Set exact balance"
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        className="neon-input"
+                        type="number"
+                        placeholder={`${adjType} Amount ($)`}
+                        value={adjAmount}
+                        onChange={(e) => {
+                          const amt = e.target.value;
+                          setAdjAmount(amt);
+                          const num = Number(amt) || 0;
+                          set("currentBalance", adjType === "DEPOSIT" ? account.currentBalance + num : account.currentBalance - num);
+                        }}
+                      />
+                      <p className="text-[10px] text-slate-400 text-right">
+                        New Balance: <span className="font-mono text-white">${adjType === "DEPOSIT" ? account.currentBalance + (Number(adjAmount) || 0) : account.currentBalance - (Number(adjAmount) || 0)}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

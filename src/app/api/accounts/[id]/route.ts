@@ -63,11 +63,34 @@ export async function PATCH(
     if (body.phaseDaysRemaining !== undefined)
       data.phaseDaysRemaining = Number(body.phaseDaysRemaining);
 
-    const account = await prisma.tradingAccount.update({ where: { id }, data });
+    const account = await prisma.$transaction(async (tx) => {
+      const updatedAccount = await tx.tradingAccount.update({ where: { id }, data });
+
+      // Handle deposit/withdrawal transactions if requested during balance edit
+      if (
+        body.transaction &&
+        (body.transaction.type === "DEPOSIT" || body.transaction.type === "WITHDRAWAL") &&
+        Number(body.transaction.amount) > 0
+      ) {
+        await tx.transaction.create({
+          data: {
+            accountId: id,
+            type: body.transaction.type,
+            amount: Number(body.transaction.amount),
+            date: new Date(),
+            status: "COMPLETED",
+            notes: body.transaction.notes || null,
+          },
+        });
+      }
+
+      return updatedAccount;
+    });
+
     return NextResponse.json({ account });
-  } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  } catch (e: any) {
+    console.error("[API/Accounts] Update error:", e);
+    return NextResponse.json({ error: e.message || "Update failed" }, { status: 500 });
   }
 }
 

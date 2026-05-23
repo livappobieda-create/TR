@@ -18,23 +18,25 @@ export async function GET(request: Request) {
     where: { id: accountId, userId: session.userId },
     include: { 
       trades: { orderBy: { date: "asc" } },
-      transactions: { orderBy: { date: "asc" } }
+      transactions: { orderBy: { date: "asc" } },
+      dailyEntries: { orderBy: { date: "asc" } }
     },
   });
 
   if (!account) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Compute real statistics using the new engine
-  const statistics = calculateAnalytics(account, account.trades, account.transactions);
+  const statistics = calculateAnalytics(account, account.trades, account.transactions, account.dailyEntries);
 
   // Generate an Equity Curve purely from trades/transactions
   // We'll create a snapshot per day
   type TimelineEvent = 
-    | { type: "TRADE"; date: Date; pnl: number }
+    | { type: "TRADE_OR_ENTRY"; date: Date; pnl: number }
     | { type: "TRANSACTION"; date: Date; amount: number; txType: string };
 
   const timeline: TimelineEvent[] = [
-    ...account.trades.map(t => ({ type: "TRADE" as const, date: t.date, pnl: t.pnl })),
+    ...account.trades.map(t => ({ type: "TRADE_OR_ENTRY" as const, date: t.date, pnl: t.pnl })),
+    ...account.dailyEntries.map(d => ({ type: "TRADE_OR_ENTRY" as const, date: d.date, pnl: d.dailyPnl })),
     ...account.transactions.map(tx => ({ 
       type: "TRANSACTION" as const, 
       date: tx.date, 
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
   for (const event of timeline) {
     const dayStr = event.date.toISOString().substring(0, 10);
     
-    if (event.type === "TRADE") {
+    if (event.type === "TRADE_OR_ENTRY") {
       currentEquity += event.pnl;
       if (!dailySnapshots[dayStr]) dailySnapshots[dayStr] = { balance: currentEquity, pnl: 0 };
       dailySnapshots[dayStr].pnl += event.pnl;
