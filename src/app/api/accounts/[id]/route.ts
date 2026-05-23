@@ -41,15 +41,18 @@ export async function PATCH(
     const data: Record<string, any> = {};
 
     if (body.name !== undefined) data.name = String(body.name).trim();
-    if (body.initialBalance !== undefined) data.initialBalance = Number(body.initialBalance);
-    if (body.currentBalance !== undefined) data.currentBalance = Number(body.currentBalance);
+    if (body.initialBalance !== undefined && !isNaN(Number(body.initialBalance))) data.initialBalance = Number(body.initialBalance);
+    if (body.currentBalance !== undefined && !isNaN(Number(body.currentBalance))) data.currentBalance = Number(body.currentBalance);
     if (body.accountType !== undefined) data.accountType = body.accountType as AccountType;
     if (body.isFunded !== undefined) data.isFunded = Boolean(body.isFunded);
     if (body.notes !== undefined) data.notes = body.notes || null;
 
     // Nullable funded fields
-    const nullableNum = (v: unknown) =>
-      v === null || v === "" || v === undefined ? null : Number(v);
+    const nullableNum = (v: unknown) => {
+      if (v === null || v === "" || v === undefined) return null;
+      const num = Number(v);
+      return isNaN(num) ? null : num;
+    };
 
     if ("propFirmName" in body) data.propFirmName = body.propFirmName || null;
     if ("challengeSize" in body) data.challengeSize = nullableNum(body.challengeSize);
@@ -60,8 +63,22 @@ export async function PATCH(
     if ("currentProfitProgress" in body)
       data.currentProfitProgress = nullableNum(body.currentProfitProgress);
     if (body.phase !== undefined) data.phase = body.phase as AccountPhase;
-    if (body.phaseDaysRemaining !== undefined)
-      data.phaseDaysRemaining = Number(body.phaseDaysRemaining);
+    if (body.phaseDaysRemaining !== undefined) {
+      const days = Number(body.phaseDaysRemaining);
+      data.phaseDaysRemaining = isNaN(days) ? null : days;
+    }
+
+    if (data.isFunded === false) {
+      data.propFirmName = null;
+      data.challengeSize = null;
+      data.profitTarget = null;
+      data.dailyDrawdownLimit = null;
+      data.maxDrawdownLimit = null;
+      data.currentDrawdown = null;
+      data.currentProfitProgress = null;
+      data.phaseDaysRemaining = null;
+      data.phase = "FUNDED";
+    }
 
     const account = await prisma.$transaction(async (tx) => {
       const updatedAccount = await tx.tradingAccount.update({ where: { id }, data });

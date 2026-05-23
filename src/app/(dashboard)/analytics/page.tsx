@@ -9,6 +9,7 @@ import {
   BarChart,
   Bar,
   Cell,
+  LabelList,
   XAxis,
   YAxis,
   Tooltip,
@@ -264,16 +265,43 @@ export default function AnalyticsPage() {
                         labelFormatter={(v) => new Date(v).toLocaleDateString()}
                       />
                       <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
+                        <LabelList 
+                          dataKey="pnl" 
+                          position="top" 
+                          formatter={(v: number) => formatCurrency(v)} 
+                          fill="#94a3b8" 
+                          fontSize={10} 
+                        />
                         {pnlBarData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
-                            fill={entry.pnl >= 0 ? "rgba(34, 197, 94, 0.8)" : "rgba(239, 68, 68, 0.8)"} 
-                            style={{ filter: "drop-shadow(0 0 4px rgba(255, 255, 255, 0.2))" }}
+                            fill={entry.pnl >= 0 ? "rgba(34, 197, 94, 0.9)" : "rgba(239, 68, 68, 0.9)"} 
+                            style={{ filter: "drop-shadow(0 0 6px rgba(255, 255, 255, 0.15))" }}
                           />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
+                </div>
+                
+                {/* Daily Cards Underneath */}
+                <div className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {pnlBarData.slice().reverse().slice(0, 10).map((day, i) => {
+                    const isProfit = day.pnl >= 0;
+                    const colorClass = isProfit ? "text-green-400" : "text-red-400";
+                    const bgClass = isProfit ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/30";
+                    
+                    return (
+                      <div key={i} className={`p-3 rounded-xl border ${bgClass} flex flex-col items-center justify-center text-center`}>
+                        <p className="text-[10px] text-slate-400 mb-1">
+                          {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </p>
+                        <p className={`font-mono font-bold ${colorClass}`}>
+                          {day.pnl > 0 ? "+" : ""}{formatCurrency(day.pnl)}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </GlassCard>
             </motion.div>
