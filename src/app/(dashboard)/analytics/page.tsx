@@ -8,6 +8,7 @@ import {
   Area,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -262,12 +263,15 @@ export default function AnalyticsPage() {
                         ]}
                         labelFormatter={(v) => new Date(v).toLocaleDateString()}
                       />
-                      <Bar
-                        dataKey="pnl"
-                        radius={[3, 3, 0, 0]}
-                        fill="#00f5ff"
-                        style={{ filter: "url(#glow)" }}
-                      />
+                      <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
+                        {pnlBarData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.pnl >= 0 ? "rgba(34, 197, 94, 0.8)" : "rgba(239, 68, 68, 0.8)"} 
+                            style={{ filter: "drop-shadow(0 0 4px rgba(255, 255, 255, 0.2))" }}
+                          />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
