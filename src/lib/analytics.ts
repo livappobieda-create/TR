@@ -63,12 +63,7 @@ export function calculateAnalytics(
     });
   }
 
-  const getTradeResult = (t: Trade, pnlNum: number): "WIN" | "LOSS" | "BREAKEVEN" => {
-    const raw = String(t.result).toUpperCase();
-    if (raw === "WIN" || raw === "LOSS" || raw === "BREAKEVEN") {
-      return raw as "WIN" | "LOSS" | "BREAKEVEN";
-    }
-    // Fallback logic using the explicitly parsed number
+  const getTradeResult = (pnlNum: number): "WIN" | "LOSS" | "BREAKEVEN" => {
     if (pnlNum > 0) return "WIN";
     if (pnlNum < 0) return "LOSS";
     return "BREAKEVEN";
@@ -79,9 +74,17 @@ export function calculateAnalytics(
     return {
       ...t,
       pnlNum,
-      normalizedResult: getTradeResult(t, pnlNum)
+      normalizedResult: getTradeResult(pnlNum)
     };
   });
+
+  console.log("----- ANALYTICS TRADE CLASSIFICATION MAP -----");
+  console.log(
+    normalizedTrades.slice(0, 5).map(t => ({
+      pnlNum: t.pnlNum,
+      classified: t.normalizedResult
+    }))
+  );
 
   const winningTrades = normalizedTrades.filter((t) => t.normalizedResult === "WIN").length;
   const losingTrades = normalizedTrades.filter((t) => t.normalizedResult === "LOSS").length;
