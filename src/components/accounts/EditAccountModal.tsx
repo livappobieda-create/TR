@@ -223,8 +223,12 @@ export function EditAccountModal({ account, open, onClose, onSaved }: EditAccoun
                     <input
                       className="neon-input"
                       type="number"
+                      step="0.01"
                       value={form.currentBalance}
-                      onChange={(e) => set("currentBalance", e.target.value)}
+                      onChange={(e) => {
+                        const englishVal = e.target.value.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
+                        set("currentBalance", englishVal);
+                      }}
                       placeholder="Set exact balance"
                     />
                   ) : (
@@ -232,12 +236,13 @@ export function EditAccountModal({ account, open, onClose, onSaved }: EditAccoun
                       <input
                         className="neon-input"
                         type="number"
+                        step="0.01"
                         placeholder={`${adjType} Amount ($)`}
                         value={adjAmount}
                         onChange={(e) => {
-                          const amt = e.target.value;
-                          setAdjAmount(amt);
-                          const num = Number(amt) || 0;
+                          const englishVal = e.target.value.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
+                          setAdjAmount(englishVal);
+                          const num = Number(englishVal) || 0;
                           set("currentBalance", adjType === "DEPOSIT" ? account.currentBalance + num : account.currentBalance - num);
                         }}
                       />

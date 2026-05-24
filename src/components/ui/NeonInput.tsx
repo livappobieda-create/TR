@@ -35,6 +35,15 @@ export const NeonInput = forwardRef<HTMLInputElement, NeonInputProps>(
               icon && "pl-10",
               className
             )}
+            onChange={(e) => {
+              if (props.type === "number" || props.inputMode === "numeric" || props.inputMode === "decimal") {
+                const englishVal = e.target.value.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
+                e.target.value = englishVal;
+              }
+              if (props.onChange) {
+                props.onChange(e);
+              }
+            }}
             {...props}
           />
         </div>

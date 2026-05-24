@@ -231,7 +231,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={pnlBarData} barSize={6}>
+                    <BarChart data={pnlBarData} barSize={12}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.3)" vertical={false} />
                       <XAxis
                         dataKey="date"
@@ -275,8 +275,7 @@ export default function AnalyticsPage() {
                         {pnlBarData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
-                            fill={entry.pnl >= 0 ? "rgba(34, 197, 94, 0.9)" : "rgba(239, 68, 68, 0.9)"} 
-                            style={{ filter: "drop-shadow(0 0 6px rgba(255, 255, 255, 0.15))" }}
+                            fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} 
                           />
                         ))}
                       </Bar>
