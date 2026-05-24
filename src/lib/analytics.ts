@@ -50,29 +50,38 @@ export function calculateAnalytics(
   // 1. Trade-Level Metrics (Exclusively from Trades table)
   const totalTrades = trades.length;
 
-  const getTradeResult = (t: Trade): "WIN" | "LOSS" | "BREAKEVEN" => {
+  console.log("----- ANALYTICS DEEP TRADE INSPECTION -----");
+  console.log({ rawTradesLength: trades.length });
+  if (trades.length > 0) {
+    const firstTrade = trades[0];
+    console.log({
+      firstTradeId: firstTrade.id,
+      rawPnl: firstTrade.pnl,
+      rawPnlType: typeof firstTrade.pnl,
+      pnlNum: Number(firstTrade.pnl),
+      rawResult: firstTrade.result
+    });
+  }
+
+  const getTradeResult = (t: Trade, pnlNum: number): "WIN" | "LOSS" | "BREAKEVEN" => {
     const raw = String(t.result).toUpperCase();
     if (raw === "WIN" || raw === "LOSS" || raw === "BREAKEVEN") {
       return raw as "WIN" | "LOSS" | "BREAKEVEN";
     }
-    // Fallback logic
-    if (t.pnl > 0) return "WIN";
-    if (t.pnl < 0) return "LOSS";
+    // Fallback logic using the explicitly parsed number
+    if (pnlNum > 0) return "WIN";
+    if (pnlNum < 0) return "LOSS";
     return "BREAKEVEN";
   };
 
-  const normalizedTrades = trades.map(t => ({
-    ...t,
-    normalizedResult: getTradeResult(t)
-  }));
-
-  // Temporary debugging
-  if (normalizedTrades.length > 0) {
-    console.log("Analytics Engine Debug - Normalizing Trades:");
-    normalizedTrades.slice(0, 3).forEach(t => {
-      console.log({ pnl: t.pnl, rawResult: t.result, normalizedResult: t.normalizedResult });
-    });
-  }
+  const normalizedTrades = trades.map(t => {
+    const pnlNum = Number(t.pnl);
+    return {
+      ...t,
+      pnlNum,
+      normalizedResult: getTradeResult(t, pnlNum)
+    };
+  });
 
   const winningTrades = normalizedTrades.filter((t) => t.normalizedResult === "WIN").length;
   const losingTrades = normalizedTrades.filter((t) => t.normalizedResult === "LOSS").length;
@@ -80,12 +89,12 @@ export function calculateAnalytics(
 
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
-  const grossProfit = trades
-    .filter((t) => t.pnl > 0)
-    .reduce((sum, t) => sum + t.pnl, 0);
-  const grossLoss = trades
-    .filter((t) => t.pnl < 0)
-    .reduce((sum, t) => sum + Math.abs(t.pnl), 0);
+  const grossProfit = normalizedTrades
+    .filter((t) => t.pnlNum > 0)
+    .reduce((sum, t) => sum + t.pnlNum, 0);
+  const grossLoss = normalizedTrades
+    .filter((t) => t.pnlNum < 0)
+    .reduce((sum, t) => sum + Math.abs(t.pnlNum), 0);
   
   // Notice we use the strict Trade-based netProfit for pure trading stats.
   // We will calculate a separate global netProfit below for the balance.
