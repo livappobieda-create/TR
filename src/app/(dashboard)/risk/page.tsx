@@ -63,6 +63,8 @@ export default function RiskManagementPage() {
           winRate={data.statistics.winRate} 
           weeklyCompoundGrowth={data.statistics.weeklyCompoundGrowth}
           isFunded={data.account.isFunded}
+          averageRR={data.statistics.averageRR}
+          currentDrawdown={data.statistics.currentDrawdown}
         />
       )}
     </div>

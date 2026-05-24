@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonInput } from "@/components/ui/NeonInput";
-import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Calculator, Shield, Activity, Target, Zap, AlertTriangle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Calculator, Shield, Activity, Target, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { motion } from "framer-motion";
 import { useLang } from "@/context/LangContext";
 
 interface RiskPanelProps {
@@ -15,9 +14,25 @@ interface RiskPanelProps {
   winRate: number;
   weeklyCompoundGrowth?: number;
   isFunded?: boolean;
+  averageRR?: number;
+  currentDrawdown?: number;
 }
 
-export function RiskPanel({ currentBalance, consistencyScore, winRate, weeklyCompoundGrowth = 0, isFunded = false }: RiskPanelProps) {
+// Simple deterministic pseudo-random generator
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+export function RiskPanel({ 
+  currentBalance, 
+  consistencyScore, 
+  winRate, 
+  weeklyCompoundGrowth = 0, 
+  isFunded = false,
+  averageRR = 1.5,
+  currentDrawdown = 0
+}: RiskPanelProps) {
   const { t } = useLang();
   const [riskPct, setRiskPct] = useState("1.0");
   const [stopLoss, setStopLoss] = useState("100");
@@ -26,42 +41,37 @@ export function RiskPanel({ currentBalance, consistencyScore, winRate, weeklyCom
   const [revLotSize, setRevLotSize] = useState("0.10");
   const [revStopLoss, setRevStopLoss] = useState("100");
   
-  // --- Calculator 1: Risk to Lot ---
-  const riskAmount = currentBalance * (parseFloat(riskPct || "0") / 100);
+  // --- Risk Engine ---
+  const numericRiskPct = parseFloat(riskPct || "0");
+  const riskAmount = currentBalance * (numericRiskPct / 100);
   const slPips = parseFloat(stopLoss || "1") || 1;
   
-  // Both Gold and Forex follow the exact same pip-to-dollar math based on the provided model:
-  // 1 Pip = $0.10 on 0.01 lot. 
-  // 100 Pips = $10.00 on 0.01 lot.
   const riskPerMicroLot = slPips * 0.1;
-    
   const recommendedLot = riskPerMicroLot > 0 ? (riskAmount / riskPerMicroLot) * 0.01 : 0;
 
-  // --- Calculator 2: Lot to Risk ---
+  // --- Reverse Calculator ---
   const rLot = parseFloat(revLotSize || "0");
   const rSl = parseFloat(revStopLoss || "1") || 1;
-  
   const revRiskPerMicro = rSl * 0.1;
   const revRiskAmount = (rLot / 0.01) * revRiskPerMicro;
   const revRiskPct = currentBalance > 0 ? (revRiskAmount / currentBalance) * 100 : 0;
-  
-  const consecutiveToDD = revRiskPct > 0 ? Math.floor(5 / revRiskPct) : 0; // Assuming 5% daily limit
+  const consecutiveToDD = revRiskPct > 0 ? Math.floor(5 / revRiskPct) : 0;
 
-  // Risk Classification
-  let riskBadge = "Conservative";
+  // --- Psychological Risk Meter & Badges ---
+  let riskBadge = t("conservative" as any) || "Conservative";
   let riskBadgeColor = "text-cyan-400 border-cyan-500/50 bg-cyan-500/10";
   let glowColor = "hover:shadow-[0_0_20px_rgba(34,211,238,0.15)]";
   
   if (revRiskPct > 5) {
-    riskBadge = "Overleveraged";
+    riskBadge = t("overleveraged" as any) || "Overleveraged";
     riskBadgeColor = "text-red-500 border-red-500/50 bg-red-500/10";
     glowColor = "shadow-[0_0_30px_rgba(239,68,68,0.2)] animate-pulse";
   } else if (revRiskPct > 2.5) {
-    riskBadge = "Aggressive";
+    riskBadge = t("aggressive" as any) || "Aggressive";
     riskBadgeColor = "text-orange-400 border-orange-500/50 bg-orange-500/10";
     glowColor = "hover:shadow-[0_0_20px_rgba(249,115,22,0.15)]";
   } else if (revRiskPct >= 1.0) {
-    riskBadge = "Disciplined";
+    riskBadge = t("disciplined" as any) || "Disciplined";
     riskBadgeColor = "text-green-400 border-green-500/50 bg-green-500/10";
     glowColor = "hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]";
   }
@@ -73,21 +83,77 @@ export function RiskPanel({ currentBalance, consistencyScore, winRate, weeklyCom
 
   const safeRiskAmount = currentBalance * (suggestedRiskPct / 100);
   const suggestedMaxTrades = suggestedRiskPct > 0 ? Math.floor(5 / suggestedRiskPct) : 0; 
-  const safeMicroRisk = 100 * 0.1; // 100 pip SL assumption
+  const safeMicroRisk = 100 * 0.1;
   const safeLot = safeMicroRisk > 0 ? (safeRiskAmount / safeMicroRisk) * 0.01 : 0;
 
-  // --- Realistic Weekly Simulation ---
-  // Cap growth between 3% to 6%
-  const baseGrowthCap = 0.06;
-  const volatilityPenalty = (100 - consistencyScore) * 0.0003; 
-  const winRatePenalty = winRate < 50 ? (50 - winRate) * 0.0005 : 0;
+  // --- Realistic Weekly Simulation Engine ---
+  // Seed based on balance so it's stable per account snapshot, but deterministic.
+  const weekSeed = Math.floor(currentBalance); 
   
-  const cappedWeeklyGrowth = Math.max(0.01, Math.min(baseGrowthCap, (weeklyCompoundGrowth || 0.02) - volatilityPenalty - winRatePenalty));
+  const simulatedDays = useMemo(() => {
+    const days = [];
+    let runningBalance = currentBalance;
+    let peakBalance = currentBalance;
+    let simMaxDD = 0;
+    const wrFactor = Math.max(0, Math.min(1, winRate / 100)); // 0 to 1
+    const safeAverageRR = averageRR > 0 ? averageRR : 1.5;
+
+    for (let i = 0; i < 5; i++) {
+      const rand = seededRandom(weekSeed + i + 100);
+      const outcomeRand = seededRandom(weekSeed + i + 200);
+      
+      // 20% neutral base, remainder split by win rate
+      let rMultiple = 0;
+      
+      if (rand < 0.20) {
+        // Neutral Day
+        rMultiple = 0;
+      } else {
+        const isWin = (rand - 0.20) / 0.80 < wrFactor;
+        if (isWin) {
+          // Win variations (partial, normal, strong)
+          if (outcomeRand < 0.2) rMultiple = safeAverageRR * 1.5; // Strong win
+          else if (outcomeRand > 0.8) rMultiple = safeAverageRR * 0.5; // Partial win
+          else rMultiple = safeAverageRR; // Normal win
+        } else {
+          // Loss variations (full SL, partial loss, defensive)
+          if (outcomeRand < 0.2) rMultiple = -1.0; // Full loss
+          else if (outcomeRand > 0.8) rMultiple = -0.4; // Defensive partial loss
+          else rMultiple = -0.8; // Normal loss
+        }
+      }
+      
+      // Calculate PNL based on exact formula
+      const consistencyMod = Math.max(0.1, consistencyScore / 100);
+      const volatilityMod = currentDrawdown > 5 ? 0.9 : 1.0; // Dampen slightly if in drawdown
+      
+      const dailyPnl = riskAmount * rMultiple * consistencyMod * volatilityMod;
+      runningBalance += dailyPnl;
+      
+      if (runningBalance > peakBalance) peakBalance = runningBalance;
+      const dd = peakBalance > 0 ? (peakBalance - runningBalance) / peakBalance * 100 : 0;
+      if (dd > simMaxDD) simMaxDD = dd;
+      
+      // Determine professional label
+      let label = t("neutralDay" as any) || "Neutral Day";
+      if (rMultiple >= 1.5) label = t("strongWinDay" as any) || "Strong Win Day";
+      else if (rMultiple > 0 && rMultiple < 1.5) label = t("recoveryDay" as any) || "Positive Day";
+      else if (rMultiple <= -1.0) label = t("volatileDay" as any) || "Volatile Day";
+      else if (rMultiple < 0 && rMultiple > -1.0) label = t("defensiveDay" as any) || "Defensive Day";
+      
+      days.push({ day: i + 1, rMultiple, pnl: dailyPnl, balance: runningBalance, label });
+    }
+    
+    return { days, endingBalance: runningBalance, maxDD: simMaxDD };
+  }, [currentBalance, winRate, averageRR, consistencyScore, currentDrawdown, riskAmount, weekSeed, t]);
+
+  const { days, endingBalance, maxDD } = simulatedDays;
+  const weeklyProfit = endingBalance - currentBalance;
+  const weeklyReturnPct = currentBalance > 0 ? (weeklyProfit / currentBalance) * 100 : 0;
   
-  const weeklyDollarGain = currentBalance * cappedWeeklyGrowth;
-  const dailyDollarGain = weeklyDollarGain / 5;
-  let runningWeeklyBalance = currentBalance;
-  const fixedWeeklyLot = recommendedLot;
+  // Next week lot calculation strictly based on simulated ending balance
+  const nextWeekRiskAmt = endingBalance * (numericRiskPct / 100);
+  const nextWeekLot = riskPerMicroLot > 0 ? (nextWeekRiskAmt / riskPerMicroLot) * 0.01 : 0;
 
   return (
     <div className="space-y-6">
@@ -213,82 +279,148 @@ export function RiskPanel({ currentBalance, consistencyScore, winRate, weeklyCom
                 <p className="text-sm text-slate-400">
                   {t("risking") || "Risking"} <strong className="text-white">{formatCurrency(revRiskAmount)}</strong>
                 </p>
-                
-                <div className="mt-4 space-y-2 text-left">
-                  <p className="text-xs text-slate-500 flex items-start gap-1.5">
-                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-yellow-500" />
-                    <span>
-                      {t("consecutiveLossWarning") || `At this risk level, ${consecutiveToDD} consecutive losses hit a 5% drawdown.`}
-                    </span>
-                  </p>
-                  {isFunded && revRiskPct > 2.5 && (
-                    <motion.p 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="text-xs text-red-400 flex items-start gap-1.5 bg-red-950/30 p-2 rounded border border-red-900/50 mt-2"
-                    >
-                      <Shield className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                      <span>{t("fundedWarning") || "PROP FIRM WARNING: This lot size is highly likely to violate funded account daily drawdown limits."}</span>
-                    </motion.p>
-                  )}
-                </div>
               </div>
             </div>
           </GlassCard>
           
-          {/* Weekly Compounding Preview */}
-          <GlassCard>
-            <div className="flex items-center gap-3 mb-4">
-              <Target className="h-5 w-5 text-green-400" />
-              <h2 className="text-base font-bold text-white">{t("weeklyCompoundingPreview") || "Realistic Weekly Projection"}</h2>
-            </div>
-            <div className="bg-slate-900/50 rounded-lg overflow-hidden border border-slate-800">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-800/50 text-xs uppercase text-slate-400">
-                  <tr>
-                    <th className="px-4 py-2 font-medium">{t("dayLabel") || "Day"}</th>
-                    <th className="px-4 py-2 font-medium">{t("estBalance") || "Est. Balance"}</th>
-                    <th className="px-4 py-2 font-medium text-right">{t("lotSize") || "Lot Size"}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {[1, 2, 3, 4, 5].map(day => {
-                    const dayProfit = dailyDollarGain;
-                    runningWeeklyBalance += dayProfit;
-                    
-                    return (
-                      <tr key={day} className="hover:bg-slate-800/20 transition-colors">
-                        <td className="px-4 py-3 text-slate-300">{t("dayLabel") || "Day"} {day}</td>
-                        <td className="px-4 py-3 font-mono text-cyan-300">
-                          {formatCurrency(runningWeeklyBalance)}
-                          {dayProfit > 0 && <span className="text-[10px] text-green-500 ml-2">+{formatCurrency(dayProfit)}</span>}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-500">
-                          {isFinite(fixedWeeklyLot) ? fixedWeeklyLot.toFixed(2) : "0.00"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="bg-cyan-950/20 border-t border-cyan-500/30">
-                    <td colSpan={2} className="px-4 py-3 text-xs text-cyan-400 font-bold">
-                      {t("nextWeekRecommendedLot") || "Next Week's Lot (Assuming SL)"}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-cyan-400">
-                      {isFinite(riskPerMicroLot) && riskPerMicroLot > 0 
-                        ? ((runningWeeklyBalance * (parseFloat(riskPct || "1") / 100)) / riskPerMicroLot * 0.01).toFixed(2) 
-                        : "0.00"}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="text-xs text-slate-500 mt-3 text-center leading-relaxed">
-              {t("weeklySimDesc") || `Projection capped at ${formatPercent(baseGrowthCap)}. Adjusted for your consistency (${consistencyScore}%) and win rate (${winRate}%).`}
-            </p>
+          {/* Risk Commentary Engine */}
+          <GlassCard className="border-indigo-500/20">
+            <h3 className="text-xs uppercase text-indigo-400 font-bold mb-3">{t("riskCommentary" as any) || "Risk Commentary"}</h3>
+            <ul className="space-y-3 text-sm text-slate-300">
+              {numericRiskPct > 3 && winRate < 45 && (
+                <li className="flex items-start gap-2 text-red-400">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{t("highInstabilityWarning" as any) || "High probability of account instability. Win rate is too low for this risk level."}</span>
+                </li>
+              )}
+              {numericRiskPct >= 5 && (
+                <li className="flex items-start gap-2 text-orange-400">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{t("highlyAggressiveWarning" as any) || "5% risk per trade is considered highly aggressive."}</span>
+                </li>
+              )}
+              {numericRiskPct > 3 && (
+                <li className="flex items-start gap-2 text-yellow-400">
+                  <Shield className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{t("reduceRiskSuggestion" as any) || "Reducing risk to 1%-2% may improve long-term consistency."}</span>
+                </li>
+              )}
+              {consecutiveToDD <= 3 && consecutiveToDD > 0 && (
+                <li className="flex items-start gap-2 text-pink-400">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{t("consecutiveLossWarning" as any) || `Three consecutive losses at this risk level may cause a major drawdown violation.`}</span>
+                </li>
+              )}
+              {isFunded && revRiskPct > 2.5 && (
+                <li className="flex items-start gap-2 text-red-500 font-bold">
+                  <Shield className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{t("fundedWarning" as any) || "PROP FIRM WARNING: This lot size is highly likely to violate funded account limits."}</span>
+                </li>
+              )}
+            </ul>
+            {(numericRiskPct <= 3 && consecutiveToDD > 3 && (!isFunded || revRiskPct <= 2.5) && (winRate >= 45 || numericRiskPct <= 2)) && (
+              <p className="text-sm text-green-400 flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                {t("riskIsBalanced" as any) || "Your risk parameters are well balanced and safe."}
+              </p>
+            )}
           </GlassCard>
         </div>
-
       </div>
+
+      {/* Weekly Compounding Preview */}
+      <GlassCard>
+        <div className="flex items-center gap-3 mb-4">
+          <Target className="h-5 w-5 text-green-400" />
+          <h2 className="text-base font-bold text-white">{t("weeklyCompoundingPreview") || "Realistic Weekly Projection"}</h2>
+        </div>
+        <div className="bg-slate-900/50 rounded-lg overflow-hidden border border-slate-800">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-800/50 text-xs uppercase text-slate-400">
+              <tr>
+                <th className="px-4 py-3 font-medium w-1/3">{t("dayLabel") || "Day"}</th>
+                <th className="px-4 py-3 font-medium">{t("outcome" as any) || "Outcome"}</th>
+                <th className="px-4 py-3 font-medium text-right">{t("estBalance") || "Balance"}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {days.map((day) => {
+                const isWin = day.pnl > 0;
+                const isLoss = day.pnl < 0;
+                const isStrong = day.rMultiple >= 1.5;
+                
+                let textColor = "text-slate-400";
+                let glow = "";
+                let Icon = Minus;
+                
+                if (isWin) {
+                  textColor = isStrong ? "text-cyan-400" : "text-green-400";
+                  glow = isStrong ? "drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]";
+                  Icon = TrendingUp;
+                } else if (isLoss) {
+                  textColor = "text-red-400";
+                  glow = "drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]";
+                  Icon = TrendingDown;
+                }
+
+                return (
+                  <tr key={day.day} className="hover:bg-slate-800/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="text-slate-300">{t("dayLabel") || "Day"} {day.day}</span>
+                        <span className={`text-[10px] ${textColor} ${glow}`}>{day.label}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className={`flex items-center gap-1.5 font-mono ${textColor} ${glow}`}>
+                        <Icon className="h-3 w-3" />
+                        <span>{day.pnl > 0 ? "+" : ""}{formatCurrency(day.pnl)}</span>
+                        <span className="text-[10px] opacity-70 ml-1">({day.rMultiple > 0 ? "+" : ""}{day.rMultiple.toFixed(1)}R)</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-cyan-300">
+                      {formatCurrency(day.balance)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Weekly Summary Under Table */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+          <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/50">
+            <p className="text-[10px] uppercase text-slate-500 mb-1">{t("expectedReturn" as any) || "Expected Return"}</p>
+            <p className={`text-lg font-bold font-mono ${weeklyProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
+              {weeklyProfit >= 0 ? "+" : ""}{formatPercent(weeklyReturnPct)}
+            </p>
+          </div>
+          <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/50">
+            <p className="text-[10px] uppercase text-slate-500 mb-1">{t("projectedProfit" as any) || "Projected Profit"}</p>
+            <p className={`text-lg font-bold font-mono ${weeklyProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
+              {weeklyProfit >= 0 ? "+" : ""}{formatCurrency(weeklyProfit)}
+            </p>
+          </div>
+          <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/50">
+            <p className="text-[10px] uppercase text-slate-500 mb-1">{t("estMaxDD" as any) || "Est. Max DD"}</p>
+            <p className="text-lg font-bold font-mono text-pink-400">
+              {maxDD.toFixed(1)}%
+            </p>
+          </div>
+          <div className="bg-slate-900/40 p-3 rounded-lg border border-cyan-900/30">
+            <p className="text-[10px] uppercase text-cyan-500 mb-1">{t("nextWeekLot" as any) || "Next Week Lot"}</p>
+            <p className="text-lg font-bold font-mono text-cyan-400">
+              {isFinite(nextWeekLot) && nextWeekLot > 0 ? nextWeekLot.toFixed(2) : "0.00"}
+            </p>
+          </div>
+        </div>
+        
+        <p className="text-xs text-slate-500 mt-4 text-center leading-relaxed">
+          {t("weeklySimDescV2" as any) || `Lot size is strictly fixed at ${isFinite(recommendedLot) ? recommendedLot.toFixed(2) : "0.00"} for the entire week. Projections are mathematically weighted by your ${winRate.toFixed(1)}% Win Rate, ${averageRR.toFixed(2)} Avg RR, and ${consistencyScore.toFixed(0)} Consistency Score.`}
+        </p>
+      </GlassCard>
+
     </div>
   );
 }
