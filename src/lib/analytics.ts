@@ -87,7 +87,8 @@ export function calculateAnalytics(
   const losingTrades = normalizedTrades.filter((t) => t.normalizedResult === "LOSS").length;
   const breakevenTrades = normalizedTrades.filter((t) => t.normalizedResult === "BREAKEVEN").length;
 
-  const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+  const winRateRaw = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+  const winRate = Number.isFinite(winRateRaw) ? winRateRaw : 0;
 
   const grossProfit = normalizedTrades
     .filter((t) => t.pnlNum > 0)
@@ -100,11 +101,17 @@ export function calculateAnalytics(
   // We will calculate a separate global netProfit below for the balance.
   const tradeNetProfit = grossProfit - grossLoss;
 
-  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 99 : 0;
+  const profitFactorRaw = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 99 : 0;
+  const profitFactor = Number.isFinite(profitFactorRaw) ? profitFactorRaw : 0;
 
-  const averageWin = winningTrades > 0 ? grossProfit / winningTrades : 0;
-  const averageLoss = losingTrades > 0 ? grossLoss / losingTrades : 0;
-  const averageRR = averageLoss > 0 ? averageWin / averageLoss : averageWin > 0 ? averageWin : 0;
+  const averageWinRaw = winningTrades > 0 ? grossProfit / winningTrades : 0;
+  const averageWin = Number.isFinite(averageWinRaw) ? averageWinRaw : 0;
+  
+  const averageLossRaw = losingTrades > 0 ? grossLoss / losingTrades : 0;
+  const averageLoss = Number.isFinite(averageLossRaw) ? averageLossRaw : 0;
+  
+  const averageRRRaw = averageLoss > 0 ? averageWin / averageLoss : averageWin > 0 ? averageWin : 0;
+  const averageRR = Number.isFinite(averageRRRaw) ? averageRRRaw : 0;
 
   // Streaks (Exclusively from Trades)
   let currentStreak = 0;
@@ -293,6 +300,18 @@ export function calculateAnalytics(
   const dailyProfitPct = balanceOneDayAgo > 0 ? ((calculatedCurrentBalance - balanceOneDayAgo) / balanceOneDayAgo) * 100 : 0;
   const weeklyProfitPct = balanceSevenDaysAgo > 0 ? ((calculatedCurrentBalance - balanceSevenDaysAgo) / balanceSevenDaysAgo) * 100 : 0;
   const monthlyProfitPct = balanceThirtyDaysAgo > 0 ? ((calculatedCurrentBalance - balanceThirtyDaysAgo) / balanceThirtyDaysAgo) * 100 : 0;
+
+  console.log("----- ANALYTICS FINAL REDUCER OUTPUT -----");
+  console.log({
+    totalTrades,
+    winningTrades,
+    losingTrades,
+    breakevenTrades,
+    grossProfit,
+    grossLoss,
+    profitFactor,
+    winRate
+  });
 
   return {
     winRate,

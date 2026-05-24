@@ -30,6 +30,8 @@ export async function GET(request: Request) {
 
   console.log("----- ANALYTICS DEBUG PIPELINE -----");
   console.log(`Account ID: ${account.id} | Total Trades in DB: ${account.trades?.length || 0}`);
+  console.log("Calculated Statistics Keys:");
+  console.log(Object.keys(statistics));
   console.log("Calculated Statistics Payload:");
   console.log(JSON.stringify({
     totalTrades: statistics.totalTrades,
