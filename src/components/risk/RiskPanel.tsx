@@ -331,7 +331,14 @@ export function RiskPanel({
               {consecutiveToDD <= 3 && consecutiveToDD > 0 && (
                 <li className="flex items-start gap-2 text-pink-400">
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                  <span>{t("consecutiveLossWarning" as any) || `Three consecutive losses at this risk level may cause a major drawdown violation.`}</span>
+                  <span>
+                    {(() => {
+                      const estimatedDrawdown = revRiskPct * 3;
+                      if (!Number.isFinite(estimatedDrawdown)) return "Three consecutive losses at this risk level may cause a major drawdown violation.";
+                      const warningMsg = t("consecutiveLossWarning" as any) || "At this risk level, 3 consecutive losses would cause a {pct}% drawdown.";
+                      return warningMsg.replace("{pct}", estimatedDrawdown.toFixed(2));
+                    })()}
+                  </span>
                 </li>
               )}
               {isFunded && revRiskPct > 2.5 && (
