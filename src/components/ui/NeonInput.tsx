@@ -37,8 +37,18 @@ export const NeonInput = forwardRef<HTMLInputElement, NeonInputProps>(
             )}
             onChange={(e) => {
               if (props.type === "number" || props.inputMode === "numeric" || props.inputMode === "decimal") {
-                const englishVal = e.target.value.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
-                e.target.value = englishVal;
+                const val = e.target.value;
+                const englishVal = val.replace(/[٠-٩۰-۹]/g, d => {
+                  const arabic = "٠١٢٣٤٥٦٧٨٩";
+                  const persian = "۰۱۲۳۴۵۶۷۸۹";
+                  if (arabic.includes(d)) return arabic.indexOf(d).toString();
+                  if (persian.includes(d)) return persian.indexOf(d).toString();
+                  return d;
+                });
+                
+                if (englishVal !== val) {
+                  e.target.value = englishVal;
+                }
               }
               if (props.onChange) {
                 props.onChange(e);

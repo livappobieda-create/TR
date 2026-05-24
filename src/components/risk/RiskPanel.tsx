@@ -18,10 +18,14 @@ interface RiskPanelProps {
   currentDrawdown?: number;
 }
 
-// Simple deterministic pseudo-random generator
-function seededRandom(seed: number) {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
+// Better deterministic pseudo-random generator (Mulberry32)
+function mulberry32(a: number) {
+  return function() {
+    var t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
 }
 
 export function RiskPanel({ 
@@ -34,24 +38,35 @@ export function RiskPanel({
   currentDrawdown = 0
 }: RiskPanelProps) {
   const { t } = useLang();
+  
+  // Independent States
   const [riskPct, setRiskPct] = useState("1.0");
   const [stopLoss, setStopLoss] = useState("100");
   const [isGold, setIsGold] = useState(true);
   
   const [revLotSize, setRevLotSize] = useState("0.10");
   const [revStopLoss, setRevStopLoss] = useState("100");
+
+  const [simLotSize, setSimLotSize] = useState("0.10");
   
+  // Clean inputs
+  const parseSafe = (val: string) => {
+    const cleaned = val.replace(/[^\d.-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  };
+
   // --- Risk Engine ---
-  const numericRiskPct = parseFloat(riskPct || "0");
+  const numericRiskPct = parseSafe(riskPct);
   const riskAmount = currentBalance * (numericRiskPct / 100);
-  const slPips = parseFloat(stopLoss || "1") || 1;
+  const slPips = parseSafe(stopLoss) || 1;
   
   const riskPerMicroLot = slPips * 0.1;
   const recommendedLot = riskPerMicroLot > 0 ? (riskAmount / riskPerMicroLot) * 0.01 : 0;
 
   // --- Reverse Calculator ---
-  const rLot = parseFloat(revLotSize || "0");
-  const rSl = parseFloat(revStopLoss || "1") || 1;
+  const rLot = parseSafe(revLotSize);
+  const rSl = parseSafe(revStopLoss) || 1;
   const revRiskPerMicro = rSl * 0.1;
   const revRiskAmount = (rLot / 0.01) * revRiskPerMicro;
   const revRiskPct = currentBalance > 0 ? (revRiskAmount / currentBalance) * 100 : 0;
@@ -87,22 +102,27 @@ export function RiskPanel({
   const safeLot = safeMicroRisk > 0 ? (safeRiskAmount / safeMicroRisk) * 0.01 : 0;
 
   // --- Realistic Weekly Simulation Engine ---
-  // Seed based on balance so it's stable per account snapshot, but deterministic.
   const weekSeed = Math.floor(currentBalance); 
+  const simSlPips = slPips;
   
   const simulatedDays = useMemo(() => {
     const days = [];
     let runningBalance = currentBalance;
     let peakBalance = currentBalance;
     let simMaxDD = 0;
-    const wrFactor = Math.max(0, Math.min(1, winRate / 100)); // 0 to 1
+    const wrFactor = Math.max(0, Math.min(1, winRate / 100));
     const safeAverageRR = averageRR > 0 ? averageRR : 1.5;
+    
+    const random = mulberry32(weekSeed);
+    
+    // Fixed simulated risk amount derived from the manually chosen simLotSize
+    const parsedSimLot = parseSafe(simLotSize);
+    const simRiskAmount = (parsedSimLot / 0.01) * (simSlPips * 0.1);
 
     for (let i = 0; i < 5; i++) {
-      const rand = seededRandom(weekSeed + i + 100);
-      const outcomeRand = seededRandom(weekSeed + i + 200);
+      const rand = random();
+      const outcomeRand = random();
       
-      // 20% neutral base, remainder split by win rate
       let rMultiple = 0;
       
       if (rand < 0.20) {
@@ -111,12 +131,10 @@ export function RiskPanel({
       } else {
         const isWin = (rand - 0.20) / 0.80 < wrFactor;
         if (isWin) {
-          // Win variations (partial, normal, strong)
           if (outcomeRand < 0.2) rMultiple = safeAverageRR * 1.5; // Strong win
           else if (outcomeRand > 0.8) rMultiple = safeAverageRR * 0.5; // Partial win
           else rMultiple = safeAverageRR; // Normal win
         } else {
-          // Loss variations (full SL, partial loss, defensive)
           if (outcomeRand < 0.2) rMultiple = -1.0; // Full loss
           else if (outcomeRand > 0.8) rMultiple = -0.4; // Defensive partial loss
           else rMultiple = -0.8; // Normal loss
@@ -125,16 +143,15 @@ export function RiskPanel({
       
       // Calculate PNL based on exact formula
       const consistencyMod = Math.max(0.1, consistencyScore / 100);
-      const volatilityMod = currentDrawdown > 5 ? 0.9 : 1.0; // Dampen slightly if in drawdown
+      const volatilityMod = currentDrawdown > 5 ? 0.9 : 1.0; 
       
-      const dailyPnl = riskAmount * rMultiple * consistencyMod * volatilityMod;
+      const dailyPnl = simRiskAmount * rMultiple * consistencyMod * volatilityMod;
       runningBalance += dailyPnl;
       
       if (runningBalance > peakBalance) peakBalance = runningBalance;
       const dd = peakBalance > 0 ? (peakBalance - runningBalance) / peakBalance * 100 : 0;
       if (dd > simMaxDD) simMaxDD = dd;
       
-      // Determine professional label
       let label = t("neutralDay" as any) || "Neutral Day";
       if (rMultiple >= 1.5) label = t("strongWinDay" as any) || "Strong Win Day";
       else if (rMultiple > 0 && rMultiple < 1.5) label = t("recoveryDay" as any) || "Positive Day";
@@ -145,13 +162,13 @@ export function RiskPanel({
     }
     
     return { days, endingBalance: runningBalance, maxDD: simMaxDD };
-  }, [currentBalance, winRate, averageRR, consistencyScore, currentDrawdown, riskAmount, weekSeed, t]);
+  }, [currentBalance, winRate, averageRR, consistencyScore, currentDrawdown, simLotSize, simSlPips, weekSeed, t]);
 
   const { days, endingBalance, maxDD } = simulatedDays;
   const weeklyProfit = endingBalance - currentBalance;
   const weeklyReturnPct = currentBalance > 0 ? (weeklyProfit / currentBalance) * 100 : 0;
   
-  // Next week lot calculation strictly based on simulated ending balance
+  // Next week lot formula
   const nextWeekRiskAmt = endingBalance * (numericRiskPct / 100);
   const nextWeekLot = riskPerMicroLot > 0 ? (nextWeekRiskAmt / riskPerMicroLot) * 0.01 : 0;
 
@@ -210,21 +227,24 @@ export function RiskPanel({
             </div>
             
             <div className="flex gap-2 mb-4">
-              <button onClick={() => setRiskPct("0.5")} className="flex-1 py-1 text-[10px] uppercase rounded bg-slate-800 text-slate-400 hover:text-white transition-colors">{t("conservative") || "Conservative"} 0.5%</button>
+              <button onClick={() => setRiskPct("0.5")} className="flex-1 py-1 text-[10px] uppercase rounded bg-slate-800 text-slate-400 hover:text-white transition-colors">{t("conservative" as any) || "Conservative"} 0.5%</button>
               <button onClick={() => setRiskPct("1.0")} className="flex-1 py-1 text-[10px] uppercase rounded bg-slate-800 text-slate-400 hover:text-white transition-colors">{t("balanced") || "Balanced"} 1.0%</button>
-              <button onClick={() => setRiskPct("2.0")} className="flex-1 py-1 text-[10px] uppercase rounded bg-slate-800 text-slate-400 hover:text-white transition-colors">{t("aggressive") || "Aggressive"} 2.0%</button>
+              <button onClick={() => setRiskPct("2.0")} className="flex-1 py-1 text-[10px] uppercase rounded bg-slate-800 text-slate-400 hover:text-white transition-colors">{t("aggressive" as any) || "Aggressive"} 2.0%</button>
             </div>
 
             <NeonInput
+              id="calc-risk-pct"
               label={t("riskPercentage") || "Risk Percentage (%)"}
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               value={riskPct}
               onChange={(e) => setRiskPct(e.target.value)}
             />
             <NeonInput
+              id="calc-stop-loss"
               label={t("stopLossPips" as any) || "Stop Loss (Pips)"}
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={stopLoss}
               onChange={(e) => setStopLoss(e.target.value)}
               hint={isGold ? "Model: 100 XAUUSD Pips = $10 risk on 0.01 lot" : "Model: 10 Forex Pips = $1 risk on 0.01 lot"}
@@ -234,7 +254,7 @@ export function RiskPanel({
               <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none" />
               <p className="text-slate-500 text-xs mb-1 relative z-10">{t("recommendedLotSize") || "Recommended Lot Size"}</p>
               <p className="text-4xl font-black text-cyan-400 font-mono drop-shadow-[0_0_15px_rgba(0,245,255,0.4)] relative z-10">
-                {isFinite(recommendedLot) ? recommendedLot.toFixed(2) : "0.00"}
+                {isFinite(recommendedLot) && recommendedLot > 0 ? recommendedLot.toFixed(2) : "0.00"}
               </p>
               <p className="text-sm text-slate-400 mt-2 relative z-10">
                 {t("risking") || "Risking"} <strong className="text-pink-400">{formatCurrency(riskAmount)}</strong>
@@ -253,15 +273,18 @@ export function RiskPanel({
             
             <div className="space-y-4 pt-4">
               <NeonInput
+                id="rev-lot-size"
                 label={t("lotSize") || "Lot Size"}
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={revLotSize}
                 onChange={(e) => setRevLotSize(e.target.value)}
               />
               <NeonInput
+                id="rev-stop-loss"
                 label={t("stopLossPips" as any) || "Stop Loss (Pips)"}
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={revStopLoss}
                 onChange={(e) => setRevStopLoss(e.target.value)}
               />
@@ -274,7 +297,7 @@ export function RiskPanel({
                   </span>
                 </div>
                 <p className={`text-4xl font-black font-mono mb-2 transition-colors ${revRiskPct > 5 ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]' : revRiskPct > 2.5 ? 'text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.4)]' : revRiskPct >= 1 ? 'text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.4)]'}`}>
-                  {isFinite(revRiskPct) ? formatPercent(revRiskPct) : "0.0%"}
+                  {isFinite(revRiskPct) && revRiskPct > 0 ? formatPercent(revRiskPct) : "0.0%"}
                 </p>
                 <p className="text-sm text-slate-400">
                   {t("risking") || "Risking"} <strong className="text-white">{formatCurrency(revRiskAmount)}</strong>
@@ -330,10 +353,26 @@ export function RiskPanel({
 
       {/* Weekly Compounding Preview */}
       <GlassCard>
-        <div className="flex items-center gap-3 mb-4">
-          <Target className="h-5 w-5 text-green-400" />
-          <h2 className="text-base font-bold text-white">{t("weeklyCompoundingPreview") || "Realistic Weekly Projection"}</h2>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <Target className="h-5 w-5 text-green-400" />
+            <h2 className="text-base font-bold text-white">{t("weeklyCompoundingPreview") || "Realistic Weekly Projection"}</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">{t("lotSize") || "Lot Size"}:</span>
+            <div className="w-24">
+              <NeonInput
+                id="sim-lot-size"
+                type="text"
+                inputMode="decimal"
+                value={simLotSize}
+                onChange={(e) => setSimLotSize(e.target.value)}
+                className="py-1 text-xs"
+              />
+            </div>
+          </div>
         </div>
+        
         <div className="bg-slate-900/50 rounded-lg overflow-hidden border border-slate-800">
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-800/50 text-xs uppercase text-slate-400">
@@ -380,6 +419,9 @@ export function RiskPanel({
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-cyan-300">
                       {formatCurrency(day.balance)}
+                      <div className={`text-[10px] ${day.balance >= currentBalance ? "text-green-500" : "text-red-500"} opacity-70`}>
+                        {day.balance >= currentBalance ? "+" : ""}{(((day.balance - currentBalance) / currentBalance) * 100).toFixed(1)}%
+                      </div>
                     </td>
                   </tr>
                 );
@@ -408,7 +450,7 @@ export function RiskPanel({
               {maxDD.toFixed(1)}%
             </p>
           </div>
-          <div className="bg-slate-900/40 p-3 rounded-lg border border-cyan-900/30">
+          <div className="bg-slate-900/40 p-3 rounded-lg border border-cyan-900/30 relative">
             <p className="text-[10px] uppercase text-cyan-500 mb-1">{t("nextWeekLot" as any) || "Next Week Lot"}</p>
             <p className="text-lg font-bold font-mono text-cyan-400">
               {isFinite(nextWeekLot) && nextWeekLot > 0 ? nextWeekLot.toFixed(2) : "0.00"}
@@ -417,7 +459,7 @@ export function RiskPanel({
         </div>
         
         <p className="text-xs text-slate-500 mt-4 text-center leading-relaxed">
-          {t("weeklySimDescV2" as any) || `Lot size is strictly fixed at ${isFinite(recommendedLot) ? recommendedLot.toFixed(2) : "0.00"} for the entire week. Projections are mathematically weighted by your ${winRate.toFixed(1)}% Win Rate, ${averageRR.toFixed(2)} Avg RR, and ${consistencyScore.toFixed(0)} Consistency Score.`}
+          {t("weeklySimDescV2" as any) || `Lot size is strictly fixed for the entire week. Projections are mathematically weighted by your ${winRate.toFixed(1)}% Win Rate, ${averageRR.toFixed(2)} Avg RR, and ${consistencyScore.toFixed(0)} Consistency Score.`}
         </p>
       </GlassCard>
 
