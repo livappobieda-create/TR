@@ -28,6 +28,21 @@ export async function GET(request: Request) {
   // Compute real statistics using the new engine
   const statistics = calculateAnalytics(account, account.trades, account.transactions, account.dailyEntries);
 
+  console.log("----- ANALYTICS DEBUG PIPELINE -----");
+  console.log(`Account ID: ${account.id} | Total Trades in DB: ${account.trades?.length || 0}`);
+  console.log("Calculated Statistics Payload:");
+  console.log(JSON.stringify({
+    totalTrades: statistics.totalTrades,
+    winningTrades: statistics.winningTrades,
+    losingTrades: statistics.losingTrades,
+    winRate: statistics.winRate,
+    profitFactor: statistics.profitFactor,
+    grossProfit: statistics.grossProfit,
+    grossLoss: statistics.grossLoss,
+    netProfit: statistics.netProfit
+  }, null, 2));
+  console.log("------------------------------------");
+
   // Generate an Equity Curve purely from daily grouped PnL and transactions
   // This matches the anti-double counting logic from the analytics engine
   const dailySnapshots: Record<string, { balance: number, pnl: number }> = {};
