@@ -28,33 +28,50 @@ export async function GET(request: Request) {
   // Compute real statistics using the new engine
   const statistics = calculateAnalytics(account, account.trades, account.transactions, account.dailyEntries);
 
-  // Generate an Equity Curve purely from trades/transactions
-  // We'll create a snapshot per day
+  // Generate an Equity Curve purely from daily grouped PnL and transactions
+  // This matches the anti-double counting logic from the analytics engine
+  const dailySnapshots: Record<string, { balance: number, pnl: number }> = {};
+  
+  // Trades have priority
+  for (const t of account.trades) {
+    const dayStr = t.date.toISOString().substring(0, 10);
+    if (!dailySnapshots[dayStr]) dailySnapshots[dayStr] = { balance: 0, pnl: 0 };
+    dailySnapshots[dayStr].pnl += t.pnl;
+  }
+  
+  // Fallback to daily entries
+  for (const d of account.dailyEntries) {
+    const dayStr = d.date.toISOString().substring(0, 10);
+    if (dailySnapshots[dayStr] === undefined || dailySnapshots[dayStr].pnl === 0) {
+      if (!dailySnapshots[dayStr]) dailySnapshots[dayStr] = { balance: 0, pnl: 0 };
+      dailySnapshots[dayStr].pnl = d.dailyPnl;
+    }
+  }
+
   type TimelineEvent = 
-    | { type: "TRADE_OR_ENTRY"; date: Date; pnl: number }
+    | { type: "PNL"; date: Date; amount: number }
     | { type: "TRANSACTION"; date: Date; amount: number; txType: string };
 
-  const timeline: TimelineEvent[] = [
-    ...account.trades.map(t => ({ type: "TRADE_OR_ENTRY" as const, date: t.date, pnl: t.pnl })),
-    ...account.dailyEntries.map(d => ({ type: "TRADE_OR_ENTRY" as const, date: d.date, pnl: d.dailyPnl })),
-    ...account.transactions.map(tx => ({ 
-      type: "TRANSACTION" as const, 
-      date: tx.date, 
-      amount: tx.amount, 
-      txType: tx.type 
-    }))
-  ].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const timeline: TimelineEvent[] = [];
+  
+  for (const [dayStr, data] of Object.entries(dailySnapshots)) {
+    timeline.push({ type: "PNL", date: new Date(dayStr + "T12:00:00Z"), amount: data.pnl });
+  }
+  
+  for (const tx of account.transactions) {
+    timeline.push({ type: "TRANSACTION", date: tx.date, amount: tx.amount, txType: tx.type });
+  }
+  
+  timeline.sort((a, b) => a.date.getTime() - b.date.getTime());
 
   let currentEquity = account.initialBalance;
-  let dailySnapshots: Record<string, { balance: number, pnl: number }> = {};
 
   for (const event of timeline) {
     const dayStr = event.date.toISOString().substring(0, 10);
     
-    if (event.type === "TRADE_OR_ENTRY") {
-      currentEquity += event.pnl;
-      if (!dailySnapshots[dayStr]) dailySnapshots[dayStr] = { balance: currentEquity, pnl: 0 };
-      dailySnapshots[dayStr].pnl += event.pnl;
+    if (event.type === "PNL") {
+      currentEquity += event.amount;
+      if (!dailySnapshots[dayStr]) dailySnapshots[dayStr] = { balance: currentEquity, pnl: event.amount };
       dailySnapshots[dayStr].balance = currentEquity;
     } else {
       if (event.txType === "DEPOSIT") {
