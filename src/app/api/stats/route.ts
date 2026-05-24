@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  let currentEquity = account.initialBalance;
+  let currentEquity = account.currentBalance;
   let dailySnapshots: Record<string, { balance: number, pnl: number }> = {};
 
   for (const event of timeline) {
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
   if (equityCurve.length === 0 || equityCurve[0].date !== account.createdAt.toISOString().substring(0, 10)) {
     equityCurve.unshift({
       date: account.createdAt.toISOString().substring(0, 10),
-      balance: account.initialBalance,
+      balance: account.currentBalance,
       pnl: 0,
       pnlPct: 0,
     });

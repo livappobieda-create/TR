@@ -180,7 +180,7 @@ export async function POST(
           userId: session.userId,
           name: `${existing.name} (Copy)`,
           initialBalance: existing.initialBalance,
-          currentBalance: existing.initialBalance,
+          currentBalance: existing.currentBalance,
           accountType: existing.accountType,
           isFunded: existing.isFunded,
           propFirmName: existing.propFirmName,

@@ -40,7 +40,7 @@ export function calculateAnalytics(
   transactions: Transaction[],
   dailyEntries: DailyEntry[] = []
 ): AnalyticsMetrics {
-  const initialBalance = account.initialBalance;
+  const baseBalance = account.currentBalance;
 
   // Merge Trades and DailyEntries to create a unified PnL timeline
   // A DailyEntry is treated as a consolidated "trade" for the day
@@ -124,8 +124,8 @@ export function calculateAnalytics(
     }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  let currentEquity = initialBalance;
-  let peakEquity = initialBalance;
+  let currentEquity = baseBalance;
+  let peakEquity = baseBalance;
   let maxDrawdownPct = 0;
 
   for (const event of timeline) {
@@ -155,17 +155,17 @@ export function calculateAnalytics(
     }
   }
 
-  // Determine actual current balance from initial + netProfit + deposits - withdrawals
+  // Determine actual current balance from base + netProfit + deposits - withdrawals
   const totalDeposits = transactions.filter(t => t.type === "DEPOSIT").reduce((sum, t) => sum + t.amount, 0);
   const totalWithdrawals = transactions.filter(t => t.type === "WITHDRAWAL").reduce((sum, t) => sum + t.amount, 0);
-  const calculatedCurrentBalance = initialBalance + netProfit + totalDeposits - totalWithdrawals;
+  const calculatedCurrentBalance = baseBalance + netProfit + totalDeposits - totalWithdrawals;
 
   const currentDrawdownVal = peakEquity - calculatedCurrentBalance;
   const currentDrawdownPct = peakEquity > 0 ? (currentDrawdownVal / peakEquity) * 100 : 0;
 
   // 6. Growth
-  // We use initial + deposits as the baseline investment.
-  const baselineInvestment = initialBalance + totalDeposits;
+  // We use base + deposits as the baseline investment.
+  const baselineInvestment = baseBalance + totalDeposits;
   const equityGrowthPct = baselineInvestment > 0 
     ? ((calculatedCurrentBalance - baselineInvestment) / baselineInvestment) * 100 
     : 0;
@@ -227,7 +227,7 @@ export function calculateAnalytics(
   const thirtyDaysAgo = nowTime - (1000 * 60 * 60 * 24 * 30);
 
   const getBalanceAtTime = (cutoffTime: number) => {
-    let bal = initialBalance;
+    let bal = baseBalance;
     for (const event of timeline) {
       if (event.date.getTime() <= cutoffTime) {
         if (event.type === "TRADE_OR_ENTRY") bal += event.pnl;
