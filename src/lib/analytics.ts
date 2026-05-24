@@ -49,9 +49,34 @@ export function calculateAnalytics(
 
   // 1. Trade-Level Metrics (Exclusively from Trades table)
   const totalTrades = trades.length;
-  const winningTrades = trades.filter((t) => t.result === "WIN").length;
-  const losingTrades = trades.filter((t) => t.result === "LOSS").length;
-  const breakevenTrades = trades.filter((t) => t.result === "BREAKEVEN").length;
+
+  const getTradeResult = (t: Trade): "WIN" | "LOSS" | "BREAKEVEN" => {
+    const raw = String(t.result).toUpperCase();
+    if (raw === "WIN" || raw === "LOSS" || raw === "BREAKEVEN") {
+      return raw as "WIN" | "LOSS" | "BREAKEVEN";
+    }
+    // Fallback logic
+    if (t.pnl > 0) return "WIN";
+    if (t.pnl < 0) return "LOSS";
+    return "BREAKEVEN";
+  };
+
+  const normalizedTrades = trades.map(t => ({
+    ...t,
+    normalizedResult: getTradeResult(t)
+  }));
+
+  // Temporary debugging
+  if (normalizedTrades.length > 0) {
+    console.log("Analytics Engine Debug - Normalizing Trades:");
+    normalizedTrades.slice(0, 3).forEach(t => {
+      console.log({ pnl: t.pnl, rawResult: t.result, normalizedResult: t.normalizedResult });
+    });
+  }
+
+  const winningTrades = normalizedTrades.filter((t) => t.normalizedResult === "WIN").length;
+  const losingTrades = normalizedTrades.filter((t) => t.normalizedResult === "LOSS").length;
+  const breakevenTrades = normalizedTrades.filter((t) => t.normalizedResult === "BREAKEVEN").length;
 
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
@@ -79,16 +104,16 @@ export function calculateAnalytics(
   let tempWinStreak = 0;
   let tempLossStreak = 0;
 
-  const sortedTrades = [...trades].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const sortedTrades = [...normalizedTrades].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   for (let i = 0; i < sortedTrades.length; i++) {
     const t = sortedTrades[i];
-    if (t.result === "WIN") {
+    if (t.normalizedResult === "WIN") {
       tempWinStreak++;
       tempLossStreak = 0;
       if (tempWinStreak > winningStreak) winningStreak = tempWinStreak;
       currentStreak = tempWinStreak;
-    } else if (t.result === "LOSS") {
+    } else if (t.normalizedResult === "LOSS") {
       tempLossStreak++;
       tempWinStreak = 0;
       if (tempLossStreak > losingStreak) losingStreak = tempLossStreak;
