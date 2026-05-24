@@ -40,7 +40,7 @@ export function calculateAnalytics(
   transactions: Transaction[],
   dailyEntries: DailyEntry[] = []
 ): AnalyticsMetrics {
-  const baseBalance = account.currentBalance;
+  const baseBalance = account.initialBalance;
 
   // Merge Trades and DailyEntries to create a unified PnL timeline
   // A DailyEntry is treated as a consolidated "trade" for the day
@@ -155,16 +155,17 @@ export function calculateAnalytics(
     }
   }
 
-  // Determine actual current balance from base + netProfit + deposits - withdrawals
+  // Since trades, entries, and transactions now correctly update TradingAccount.currentBalance in the database,
+  // we use it directly as the source of truth for the final current balance.
   const totalDeposits = transactions.filter(t => t.type === "DEPOSIT").reduce((sum, t) => sum + t.amount, 0);
   const totalWithdrawals = transactions.filter(t => t.type === "WITHDRAWAL").reduce((sum, t) => sum + t.amount, 0);
-  const calculatedCurrentBalance = baseBalance + netProfit + totalDeposits - totalWithdrawals;
+  const calculatedCurrentBalance = account.currentBalance;
 
   const currentDrawdownVal = peakEquity - calculatedCurrentBalance;
   const currentDrawdownPct = peakEquity > 0 ? (currentDrawdownVal / peakEquity) * 100 : 0;
 
   // 6. Growth
-  // We use base + deposits as the baseline investment.
+  // We use base (initialBalance) + deposits as the baseline investment.
   const baselineInvestment = baseBalance + totalDeposits;
   const equityGrowthPct = baselineInvestment > 0 
     ? ((calculatedCurrentBalance - baselineInvestment) / baselineInvestment) * 100 

@@ -39,11 +39,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
     }
 
-    const trade = await prisma.trade.create({
-      data: {
-        ...parsed.data,
-        date: parsed.data.date ? new Date(parsed.data.date) : new Date(),
-      },
+    const trade = await prisma.$transaction(async (tx) => {
+      const newTrade = await tx.trade.create({
+        data: {
+          ...parsed.data,
+          date: parsed.data.date ? new Date(parsed.data.date) : new Date(),
+        },
+      });
+
+      await tx.tradingAccount.update({
+        where: { id: parsed.data.accountId },
+        data: { currentBalance: { increment: parsed.data.pnl } },
+      });
+
+      return newTrade;
     });
 
     return NextResponse.json({ trade });
